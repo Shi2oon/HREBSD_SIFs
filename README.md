@@ -1,5 +1,7 @@
 # KIII_from_Strain
 This code decompose the Stress intesity factors from strain maps directly without the need for integration
+Start with generating strain data using the calibration code and then use the output for the main function
+The code is self contained and does not need extra functions
 % for this function to work properly, spacing between potins in x and y
 % should be the same and the crack should be at the centre (this can be
 % done inside this fucntion also)
