@@ -2,13 +2,15 @@
 This code decompose the Stress intesity factors from strain maps directly without the need for integration
 Start with generating strain data using the calibration code and then use the output for the main function
 The code is self contained and does not need extra functions
+
+
 % for this function to work properly, spacing between potins in x and y
 % should be the same and the crack should be at the centre (this can be
 % done inside this fucntion also)
 
 
-% this functions accept data from HR-EBSD as formuated with 'GetData'
-% function. The crack needs to be on the centre exactly for the code to
+% this functions accept data from HR-EBSD and sttero-DIC
+% The crack needs to be on the centre exactly for the code to
 % work and give good results. This code already include the assumption of
 % sigma 33 free == 0
 % stress in Pa, E in Pa, distance in m
