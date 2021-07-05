@@ -1,9 +1,9 @@
 function [J,KI,KII,KIII] = KIII_2D(Maps,MatProp,xEBSD)
-close all; clc
+close all;
 
-% This code decompose the Stress intesity factors from strain maps 
+% This code decompose the Stress intesity factors from strain maps
 % directly without the need for integration
-% Start with generating strain data using the calibration code and 
+% Start with generating strain data using the calibration code and
 % then use the output for the main function
 % The code is self contained and does not need extra functions
 
@@ -25,7 +25,7 @@ close all; clc
 % 9 columns the first three columns are the x, y and z coordinate in meters. z
 % cooridnate can be a zero column. the 4th to the 9th column are the strain
 % components arranged as
-% Maps = [X(:) Y(:) Z(:) E11(:) E12(:) E13(:) E21(:) E22(:) E23(:) E31(:) E32(:) E33(:)]; 
+% Maps = [X(:) Y(:) Z(:) E11(:) E12(:) E13(:) E21(:) E22(:) E23(:) E31(:) E32(:) E33(:)];
 
 % if the map is a 2D strain map then zero all out of the plane components
 
@@ -37,8 +37,15 @@ close all; clc
 %
 if size(Maps,2) > 1
     alldata = Maps; clear Maps
+    if size(alldata,2) == 5
+        alldata = [alldata(:,1) alldata(:,2) zeros(size(alldata(:,2))) ...
+            alldata(:,3) alldata(:,5) zeros(size(alldata(:,2))) ...
+            alldata(:,5) alldata(:,4) zeros(size(alldata(:,2))) ...
+            zeros(size(alldata(:,2))) zeros(size(alldata(:,2))) ...
+            zeros(size(alldata(:,2)))];
+    end
     [~,Maps]=reshapeStrain(alldata);
-    Maps.stepsize = unique(round(diff(unique(Maps.Y(:))),3));
+    Maps.stepsize = unique(round(diff(unique(Maps.Y(:))),4));
     Maps.units.xy = 'm';
     Maps.units.St = 'Pa';
     if size(MatProp,1) == 6
@@ -75,8 +82,8 @@ if strcmpi(answer,'R') % crop data
     Maps.E31 = flip(flip(Maps.E31,1),2);    Maps.E32 = flip(flip(Maps.E32,1),2);
     Maps.E33 = flip(flip(Maps.E33,1),2);
 end
+close
 
-% close
 %%
 switch Maps.units.St
     case 'Pa'
@@ -129,6 +136,7 @@ if isfield(Maps,'Stiffness')
                 2*E12(iR,iC); 2*E13(iR,iC);  2*E23(iR,iC)];
             if exist('xEBSD','var')
                 %solve the (HR-EBSD) boundary condition
+                Maps.E = Maps.E/(1-Maps.nu^2);% for HR-EBSD plane strain conditions
                 K1=strain(iR,iC,1)-strain(iR,iC,3);
                 K2=strain(iR,iC,2)-strain(iR,iC,3);
                 K3=strain(iR,iC,4)*Maps.Stiffness(4,3)+...
@@ -217,7 +225,7 @@ uYZd(:,:,2) = zeros(DataSize);
 
 uZXd(:,:,2) = zeros(DataSize);
 uZYd(:,:,2) = zeros(DataSize);
-uZZd(:,:,2) = 0.5*(Maps.E33-flipud(Maps.E33));
+uZZd(:,:,2) = zeros(DataSize);
 
 % Mode III
 uXXd(:,:,3) = zeros(DataSize);
@@ -290,10 +298,10 @@ else    % Chauchy stress tensor, assming linear-elastic, isotropic material for
 end
 Wd = 0.5*(E11d.*sXXd+E22d.*sYYd+E33d.*sZZd+2*E12d.*sXYd+2*E13d.*sXZd+2*E23d.*sYZd);
 
-plotDecomposedStrain(E11d,E22d,E33d,E12d,E13d,E23d,Maps);
+plot_DecomposedStrain(E11d,E22d,E33d,E12d,E13d,E23d,Maps);
 if isfield(Maps,'SavingD')
-saveas(gcf, [fileparts(Maps.SavingD) '\Strain_I_II_III.fig']);
-saveas(gcf, [fileparts(Maps.SavingD) '\Strain_I_II_III.tif']);  close
+    saveas(gcf, [fileparts(Maps.SavingD) '\Strain_I_II_III.fig']);
+    saveas(gcf, [fileparts(Maps.SavingD) '\Strain_I_II_III.tif']);  close
 end
 
 %%
@@ -359,10 +367,10 @@ KII.div  = round(std(rmoutliers(real(KII.Raw(contrs:end))),1),dic);
 KIII.true= round(mean(rmoutliers(real(KIII.Raw(contrs:end)))),dic);
 KIII.div = round(std(rmoutliers(real(KIII.Raw(contrs:end))),1),dic);
 
-plotJKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
+plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_KI_II_III_v2.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_KI_II_III_v2.tif']);  %  close all
+    saveas(gcf, [fileparts(Maps.SavingD) '\J_KI_II_III.fig']);
+    saveas(gcf, [fileparts(Maps.SavingD) '\J_KI_II_III.tif']);  %  close all
     save([fileparts(Maps.SavingD) '\KIII_2D_v2.mat'],'Maps','J','KI','KII','KIII','saf');
 end
 end
@@ -429,12 +437,12 @@ for iRow = 1:nRows % loop rows
     end
 end
 alldata = [dataum.X(:)      dataum.Y(:)     dataum.Z(:)     dataum.E11(:) ...
-           dataum.E12(:)    dataum.E13(:)  	dataum.E21(:)   dataum.E22(:)   ...
-           dataum.E23(:)    dataum.E31(:)   dataum.E32(:)   dataum.E33(:)]; 
+    dataum.E12(:)    dataum.E13(:)  	dataum.E21(:)   dataum.E22(:)   ...
+    dataum.E23(:)    dataum.E31(:)   dataum.E32(:)   dataum.E33(:)];
 
 end
 
-function [E,v,G,Co] = effectiveE_nu(C) 
+function [E,v,G,Co] = effectiveE_nu(C)
 % this function caclulates effective Youn modulus and Possion ratio for a
 % ansitropic material based on this paper
 % Reference: https://doi.org/10.3390/cryst8080307
@@ -445,16 +453,16 @@ S = C^-1;
 BR = 1/(3*S(1,1)+6*S(1,2));             % Reuss bulk modulus
 GR = 5/(4*S(1,1)-4*S(1,2)+3*S(4,4));   % Reuss shear modulus
 
-B = (BR+BV)/2;                          % Hill’s average bulk modulus
-G = (GR+GV)/2;                          % Hill’s average shear modulus
-E = 9*B*G/(3*B+G);                      % Young’s modulus (E)
-v = (3*B-E)/(6*B);                      % Poisson’s ratio
+B = (BR+BV)/2;                          % Hillâ€™s average bulk modulus
+G = (GR+GV)/2;                          % Hillâ€™s average shear modulus
+E = 9*B*G/(3*B+G);                      % Youngâ€™s modulus (E)
+v = (3*B-E)/(6*B);                      % Poissonâ€™s ratio
 Co = [];
 
 % K = (C(1,1)+C(2,2)+C(3,3)+2*(C(1,2)+C(2,3)+C(1,2)))/9; % istropic shear Modulus
 % Gv = (C(1,1)+C(2,2)+C(3,3)-(C(1,2)+C(2,3)+C(1,2))+2*(C(4,4)+C(5,5)+C(6,6)))/15; % Bulk Modulus
 
-%% Paper: What is the Young’s Modulus of Silicon?
+%% Paper: What is the Youngâ€™s Modulus of Silicon?
 Cc =C^-1;
 Co.Ex = 1/Cc(1,1);
 Co.Ey = 1/Cc(2,2);
@@ -474,13 +482,12 @@ Co.C = [ 1/Co.Ex       -Co.vxy/Co.Ey   -Co.vxz/Co.Ez 0   0   0
     0          0           0   0   0   1/Co.Gxy];
 Co.C = Co.C^-1;
 
-%% a different approach as sometime the first approach sometimes 
+%% a different approach as sometime the first approach sometimes
 % delivers minus results!
-if G<0 || E<0 || v<0 
-    E = (Co.Ex+Co.Ey)/2;
-    v = (Co.vxz+Co.vyz)/2;
-    G = (Co.Gxz+Co.Gyz)/2;
+if G<0 || E<0 || v<0
+    v = 1+(Co.vxz+Co.vyz)/2;
 end
+
 end
 
 function [Crop] = CroppingEqually(Maps)
@@ -514,15 +521,15 @@ plot([Xcrop(1) Xcrop(2) Xcrop(2) Xcrop(1) Xcrop(1)],...
 plot(lineX,lineY,'pw')
 hold off
 
-[~, Xcrop(1)] = min(abs(xLin-Xcrop(1)));   
-[~, Xcrop(2)] = min(abs(xLin-Xcrop(2)));   
-[~, Ycrop(1)] = min(abs(yLin-Ycrop(1)));   
-[~, Ycrop(2)] = min(abs(yLin-Ycrop(2)));   
+[~, Xcrop(1)] = min(abs(xLin-Xcrop(1)));
+[~, Xcrop(2)] = min(abs(xLin-Xcrop(2)));
+[~, Ycrop(1)] = min(abs(yLin-Ycrop(1)));
+[~, Ycrop(2)] = min(abs(yLin-Ycrop(2)));
 
 for iV=1:3
     for iO=1:3
-    eval(sprintf('Crop.E%d%d = Maps.E%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
-        iV,iO,iV,iO));
+        eval(sprintf('Crop.E%d%d = Maps.E%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
+            iV,iO,iV,iO));
     end
 end
 
@@ -535,4 +542,102 @@ if (Crop.X(1) - Crop.X(end))>0;         Crop.X   = flip(Crop.X,2);         end
 if (Crop.Y(1) - Crop.Y(end))>0;         Crop.Y   = flip(Crop.Y,1);         end
 
 end
+%%
+function plot_DecomposedStrain(uXXd,uYYd,uZZd,uXYd,uXZd,uYZd,Maps)
+figure;
+s1=subplot(3,3,1);  	contourf(Maps.X,Maps.Y,Maps.E11,'LineStyle','none');
+title([char(949) '_{xx}'],'fontsize',19);
+axis image; axis off; colormap jet; box off;
+c  =colorbar;	cU(1,:) = c.Limits;     colorbar off;
+s2=subplot(3,3,2);  	contourf(Maps.X,Maps.Y,Maps.E12,'LineStyle','none');
+title([char(949) '_{xy}'],'fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(2,:) = c.Limits;     colorbar off;
+s3=subplot(3,3,3);  	contourf(Maps.X,Maps.Y,Maps.E31,'LineStyle','none');
+title([char(949) '_{xz}'],'fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(3,:) = c.Limits;     colorbar off;
+s5=subplot(3,3,5);  	contourf(Maps.X,Maps.Y,Maps.E22,'LineStyle','none');
+title([char(949) '_{yy}'],'fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(4,:) = c.Limits;     colorbar off;
+s6=subplot(3,3,6);  	contourf(Maps.X,Maps.Y,Maps.E32,'LineStyle','none');
+title([char(949) '_{yz}'],'fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(5,:) = c.Limits;    colorbar off;
+s9=subplot(3,3,9);  	contourf(Maps.X,Maps.Y,Maps.E33,'LineStyle','none');
+title([char(949) '_{zz}'],'fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(6,:) = c.Limits;     colorbar off;
+addScale([3 3 9],[Maps.X(:) Maps.Y(:)]);
 
+EId   = sqrt(0.5*((uXXd(:,:,1)-uYYd(:,:,1)).^2+(uYYd(:,:,1)-uZZd(:,:,1)).^2+...
+    (uZZd(:,:,1)-uXXd(:,:,1)).^2+ ...
+    (uXYd(:,:,1).^2+uYZd(:,:,1).^2+uXZd(:,:,1).^2).*6));
+EIId  = sqrt(0.5*((uXXd(:,:,2)-uYYd(:,:,2)).^2+(uYYd(:,:,2)-uZZd(:,:,2)).^2+...
+    (uZZd(:,:,2)-uXXd(:,:,2)).^2+ ...
+    (uXYd(:,:,2).^2+uYZd(:,:,2).^2+uXZd(:,:,2).^2).*6));
+EIIId = sqrt(0.5*((uXXd(:,:,3)-uYYd(:,:,3)).^2+(uYYd(:,:,3)-uZZd(:,:,3)).^2+...
+    (uZZd(:,:,3)-uXXd(:,:,3)).^2+ ...
+    (uXYd(:,:,3).^2+uYZd(:,:,3).^2+uXZd(:,:,3).^2).*6));
+
+s4=subplot(3,3,4);  	contourf(Maps.X,Maps.Y,EId,'LineStyle','none');
+title([char(949) '^{I}_M'],'fontsize',19);
+axis image; axis off;  box off; colormap jet;
+c  =colorbar;	cU(7,:) = c.Limits;     colorbar off;
+s7=subplot(3,3,7);  	contourf(Maps.X,Maps.Y,EIId,'LineStyle','none');
+title([char(949) '^{II}_M'],'fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(8,:) = c.Limits;     colorbar off;
+s8=subplot(3,3,8);  	contourf(Maps.X,Maps.Y,EIIId,'LineStyle','none');
+title([char(949) '^{III}_M'],'fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(9,:) = c.Limits;    colorbar off;
+%
+cbax  = axes('visible', 'off');         cU(abs(cU)==1)=0;
+caxis(cbax,[min(cU(:)) max(cU(:))]);
+h = colorbar(cbax, 'location', 'westoutside','position', [0.9011 0.1211 0.0121 0.7533] );
+h.Label.String = [char(949)];
+h.Label.FontSize = 30;
+set([s1 s2 s3 s5 s6 s7 s8 s9],"clim",caxis);
+%}
+set(gcf,'position',[1 -41 1900 1000]);
+end
+%%
+function plot_JKIII(KI,KII,KIII,J,stepsize,input_unit)
+Kd = [KI.Raw(:); KII.Raw(:); KIII.Raw(:)];
+set(0,'defaultAxesFontSize',22);       set(0,'DefaultLineMarkerSize',14)
+Contour = (1:length(J.Raw))*stepsize;
+fig=figure;set(fig,'defaultAxesColorOrder',[[0 0 0]; [1 0 0]]);
+yyaxis left;    hold on;
+plot(Contour,KI.Raw,'k--o','MarkerEdgeColor','k','LineWidth',4);
+plot(Contour,KII.Raw,'k--s','MarkerEdgeColor','k','LineWidth',1.5,'MarkerFaceColor','k');
+plot(Contour,KIII.Raw,'k--d','MarkerEdgeColor','k','LineWidth',4');
+ylabel('K (MPa m^{0.5})'); hold off
+if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
+yyaxis right;
+plot(Contour,J.K.Raw,'r--<','MarkerEdgeColor','r','LineWidth',1.5,'MarkerFaceColor','r');
+ylabel('J [J/m^2]');        ylim([0 max(J.K.Raw)+min(J.K.Raw)/4]);
+legend(['K_{I} = '     num2str(KI.true)   ' Â± ' num2str(KI.div)  ' MPa\surdm' ],...
+    ['K_{II} = '       num2str(KII.true)  ' Â± ' num2str(KII.div) ' MPa\surdm' ],...
+    ['K_{III} = '      num2str(KIII.true) ' Â± ' num2str(KIII.div) ' MPa\surdm' ],...
+    ['J_{integral} = ' num2str(J.K.true)    ' Â± ' num2str(J.K.div)   ' J/m^2'],...
+    'location','northoutside','box','off');
+set(gcf,'position',[60,-70,750,1100]);grid on;  box off;
+ax1 = gca;  axPos = ax1.Position;
+% Change the position of ax1 to make room for extra axes
+% format is [left bottom width height], so moving up and making shorter here...
+ax1.Position = axPos + [0 0.2 0 -0.15];
+% Exactly the same as for plots (above), axes LineWidth can be changed inline or after
+ax1.LineWidth = 1;
+% Add two more axes objects, with small multiplier for height, and offset for bottom
+ax2 = axes('position', (axPos .* [1 1 1 1e-3]) + [0 0.08 0 0], 'color', 'none', 'linewidth', 1);
+% You can change the limits of the new axes using XLim
+ax2.XLim = [0 length(Contour)+1];     ax1.XLim = [0 max(Contour)+stepsize];
+% You can label the axes using XLabel.String
+if strcmpi(input_unit,'um')
+    input_unit = '\mum';
+end
+ax1.XLabel.String = ['Contour Length [' input_unit ']'];
+ax2.XLabel.String = 'Contour Number';
+end
