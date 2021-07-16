@@ -34,7 +34,10 @@ close all;
 % xEBSD will assume and solve for  plane strain conditions with sigma33 == 0 + no
 % volumetric change.
 
-%
+% Example:
+% [alldata,MatProp] = KIII_2D_Calibration(3,1,5);
+% [J,KI,KII,KIII] = KIII_2D(alldata,MatProp); % as desigignated maps
+
 if size(Maps,2) > 1
     alldata = Maps; clear Maps
     if size(alldata,2) == 5
@@ -59,6 +62,7 @@ end
 %% prepare Data
 imagesc(Maps.E11);axis tight; axis image; axis off
 set(gcf,'position',[737 287 955 709]);
+%
 opts.Interpreter = 'tex';       % Include the desired Default answer
 opts.Default     = 'N';         % Use the TeX interpreter to format the question
 quest            = 'Do you want to Crop and Centre the Crack tip';
@@ -75,12 +79,13 @@ opts.Default     = 'L';         % Use the TeX interpreter to format the question
 quest            = 'Is the crack on your left or right ?';
 answer           = questdlg(quest,'Boundary Condition','L','R', opts);
 if strcmpi(answer,'R') % crop data
-    Maps.E11 = flip(flip(Maps.E11,1),2);    Maps.E12 = flip(flip(Maps.E12,1),2);
-    Maps.E13 = flip(flip(Maps.E13,1),2);
-    Maps.E21 = flip(flip(Maps.E21,1),2);    Maps.E22 = flip(flip(Maps.E22,1),2);
-    Maps.E23 = flip(flip(Maps.E23,1),2);
-    Maps.E31 = flip(flip(Maps.E31,1),2);    Maps.E32 = flip(flip(Maps.E32,1),2);
-    Maps.E33 = flip(flip(Maps.E33,1),2);
+%}
+Maps.E11 = flip(flip(Maps.E11,1),2);    Maps.E12 = flip(flip(Maps.E12,1),2);
+Maps.E13 = flip(flip(Maps.E13,1),2);
+Maps.E21 = flip(flip(Maps.E21,1),2);    Maps.E22 = flip(flip(Maps.E22,1),2);
+Maps.E23 = flip(flip(Maps.E23,1),2);
+Maps.E31 = flip(flip(Maps.E31,1),2);    Maps.E32 = flip(flip(Maps.E32,1),2);
+Maps.E33 = flip(flip(Maps.E33,1),2);
 end
 close
 
@@ -96,6 +101,20 @@ switch Maps.units.St
         Saf = 1e9;
 end
 
+if isfield(Maps,'Stiffness')
+    Maps.Stiffness = Maps.Stiffness*Saf;
+    [Maps.E,Maps.nu,Maps.G,Maps.Co] = effectiveE_nu(Maps.Stiffness); % in Pa
+else
+    Maps.E = Maps.E*Saf;
+    Maps.G = Maps.E/(2*(1 + Maps.nu));
+end
+if exist('xEBSD','var')
+    Maps.E = Maps.E/(1-Maps.nu^2);% for HR-EBSD plane strain conditions
+    Maps.G = Maps.G/(1-Maps.nu^2);
+    %  comment this out if you want to use the displacement derviatives
+    Maps = rmfield(Maps,'A11');
+end
+
 switch Maps.units.xy
     case 'm'
         saf = 1;
@@ -108,78 +127,35 @@ switch Maps.units.xy
 end
 Maps.stepsize = Maps.stepsize*saf;
 Maps.units.St = 'Pa';        Maps.units.xy = 'm';
-
-%% Input
 DataSize = [size(Maps.E11),1];
 
-%% JMAN approach (without FEM) - Standard J-integral.
+%% Decomposition method.
+[du_dx,E,S] = decomposeA0(Maps);
+Wd = 0.5*(E(:,:,1,1,:).*S(:,:,1,1,:) + E(:,:,1,2,:).*S(:,:,1,2,:) + E(:,:,1,3,:).*S(:,:,1,3,:)...
+        + E(:,:,2,1,:).*S(:,:,2,1,:) + E(:,:,2,2,:).*S(:,:,2,2,:) + E(:,:,2,3,:).*S(:,:,2,3,:)...
+        + E(:,:,3,1,:).*S(:,:,3,1,:) + E(:,:,3,2,:).*S(:,:,3,2,:) + E(:,:,3,3,:).*S(:,:,3,3,:));
+%
+% Decomposed Plots
+if exist('xEBSD','var')
+    plot_DecomposedStess(S(:,:,1,1,:),S(:,:,2,2,:),S(:,:,3,3,:),S(:,:,1,2,:),...
+                         S(:,:,1,3,:),S(:,:,2,3,:),Maps,Saf);
+    if isfield(Maps,'SavingD')
+        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Stress.fig']);
+        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Stress.tif']);  close
+    end
+else
+    plot_DecomposedStrain(E(:,:,1,1,:),E(:,:,2,2,:),E(:,:,3,3,:),E(:,:,1,2,:),...
+                          E(:,:,1,3,:),E(:,:,2,3,:),Maps);
+    if isfield(Maps,'SavingD')
+        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Strain.fig']);
+        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Strain.tif']);  close
+    end
+end
+%}
+%%
 % An approach to calculate the J -integral by digital image correlation
 % displacement field measurement, FFEMS (2012), 35, ?971-984
 % Displacement gradient
-uXX = Maps.E11;     uXY = Maps.E12;     uXZ = Maps.E13;
-uYX = Maps.E21;     uYY = Maps.E22;     uYZ = Maps.E23;
-uZX = Maps.E31;     uZY = Maps.E32;     uZZ = Maps.E33;
-% Infitisimal strain tensor
-E11 = uXX;
-E22 = uYY;
-E33 = uZZ;
-E12 = 1/2*(uXY+uYX);
-E13 = 1/2*(uXZ+uZX);
-E23 = 1/2*(uYZ+uZY);
-
-if isfield(Maps,'Stiffness')
-    Maps.Stiffness = Maps.Stiffness*Saf;
-    [Maps.E,Maps.nu,Maps.G,Maps.Co] = effectiveE_nu(Maps.Stiffness); % in Pa
-    for iR = 1:size(Maps.E11,1)
-        for iC = 1:size(Maps.E11,2)
-            strain(iR,iC,:) = [uXX(iR,iC);   uYY(iR,iC);    uZZ(iR,iC);...
-                2*E12(iR,iC); 2*E13(iR,iC);  2*E23(iR,iC)];
-            if exist('xEBSD','var')
-                %solve the (HR-EBSD) boundary condition
-                Maps.E = Maps.E/(1-Maps.nu^2);% for HR-EBSD plane strain conditions
-                K1=strain(iR,iC,1)-strain(iR,iC,3);
-                K2=strain(iR,iC,2)-strain(iR,iC,3);
-                K3=strain(iR,iC,4)*Maps.Stiffness(4,3)+...
-                    strain(iR,iC,5)*Maps.Stiffness(5,3)+...
-                    strain(iR,iC,6)*Maps.Stiffness(6,3);
-                
-                e33n=-(K1*Maps.Stiffness(1,3)+K2*Maps.Stiffness(2,3)+K3)/...
-                    (Maps.Stiffness(1,3)+Maps.Stiffness(2,3)+Maps.Stiffness(3,3));
-                e11n=K1+e33n;
-                e22n=K2+e33n;
-                %new strain/stress vector
-                co = strain(iR,iC,4:6);
-                strain(iR,iC,:)=[e11n;e22n;e33n;co(:)];
-            end
-            stress(iR,iC,:) = Maps.Stiffness*squeeze(strain(iR,iC,:));
-            sXX(iR,iC) = stress(iR,iC,1);
-            sYY(iR,iC) = stress(iR,iC,2);
-            sZZ(iR,iC) = stress(iR,iC,3);
-            sXY(iR,iC) = stress(iR,iC,4);
-            sXZ(iR,iC) = stress(iR,iC,5);
-            sYZ(iR,iC) = stress(iR,iC,6);
-        end
-    end
-    E11 = squeeze(strain(:,:,1));
-    E22 = squeeze(strain(:,:,2));
-    E33 = squeeze(strain(:,:,3));
-    E12 = 0.5*squeeze(strain(:,:,4));
-    E13 = 0.5*squeeze(strain(:,:,5));
-    E23 = 0.5*squeeze(strain(:,:,6));
-else    % Chauchy stress tensor, assming linear-elastic, isotropic material for
-    % plane stress conditions
-    Maps.E = Maps.E*Saf;
-    Maps.G = Maps.E/(2*(1 + Maps.nu));
-    sXX = Maps.E/(1-Maps.nu^2)*(E11+Maps.nu*(E22+E33));
-    sYY = Maps.E/(1-Maps.nu^2)*(E22+Maps.nu*(E11+E33));
-    sZZ = Maps.E/(1-Maps.nu^2)*(E33+Maps.nu*(E11+E22));
-    sXY = 2*Maps.G*E12;
-    sXZ = 2*Maps.G*E13;
-    sYZ = 2*Maps.G*E23;
-end
-clear stress strain
-% Elastic strain energy
-W = 0.5*(E11.*sXX+E22.*sYY+E33.*sZZ+2*E12.*sXY+2*E13.*sXZ+2*E23.*sYZ);
 % Generate q field
 celw = 1;  % Width of area contour. Has to be an odd number.
 dQdX = ones(DataSize)/(Maps.stepsize*celw);
@@ -188,7 +164,15 @@ dQdY = dQdX';
 dQdX(dQdX.*dQdY~=0) = 0;
 % Domain integral
 dA = ones(DataSize).*Maps.stepsize^2;
-JA = ((sXX.*uXX+sXY.*uYX+sXZ.*uZX-W).*dQdX+(sYY.*uYX+sXY.*uXX+sYZ.*uZX).*dQdY).*dA;
+
+if exist('xEBSD','var')
+    E = du_dx;
+end
+
+JAd = ((S(:,:,1,1,:).*E(:,:,1,1,:) + S(:,:,1,2,:).*E(:,:,2,1,:)+...
+        S(:,:,1,3,:).*E(:,:,3,1,:) - Wd).*dQdX +  (S(:,:,2,2,:).*...
+        E(:,:,2,1,:) +S(:,:,1,2,:).*E(:,:,1,1,:)+...
+        S(:,:,2,3,:).*E(:,:,3,1,:)).*dQdY).*dA;
 % Contour selection
 mid = floor(DataSize(1)/2);
 [a,b] = meshgrid(1:DataSize(1));
@@ -196,185 +180,177 @@ linecon=round(max((abs(a-mid-1/2)),abs(b-mid-1/2)));
 % Summation of integrals
 for ii = 1:mid-1
     areaID = linecon>=(ii-floor(celw/2)) & linecon<=(ii+floor(celw/2));
-    J.JIII(ii) = sum(sum(JA.*areaID,'omitnan'),'omitnan');
-end
-J.Raw = abs(J.JIII);
-
-%% Decomposition method.
-% Mode I
-uXXd(:,:,1) = 0.5*(Maps.E11+flipud(Maps.E11));
-uXYd(:,:,1) = 0.5*(Maps.E12-flipud(Maps.E12));
-uXZd(:,:,1) = 0.5*(Maps.E13+flipud(Maps.E13));
-
-uYXd(:,:,1) = 0.5*(Maps.E21-flipud(Maps.E21));
-uYYd(:,:,1) = 0.5*(Maps.E22+flipud(Maps.E22));
-uYZd(:,:,1) = 0.5*(Maps.E23-flipud(Maps.E23));
-
-uZXd(:,:,1) = 0.5*(Maps.E31+flipud(Maps.E31));
-uZYd(:,:,1) = 0.5*(Maps.E32-flipud(Maps.E32));
-uZZd(:,:,1) = 0.5*(Maps.E33+flipud(Maps.E33));
-
-% Mode II
-uXXd(:,:,2) = 0.5*(Maps.E11-flipud(Maps.E11));
-uXYd(:,:,2) = 0.5*(Maps.E12+flipud(Maps.E12));
-uXZd(:,:,2) = zeros(DataSize);
-
-uYXd(:,:,2) = 0.5*(Maps.E21+flipud(Maps.E21));
-uYYd(:,:,2) = 0.5*(Maps.E22-flipud(Maps.E22));
-uYZd(:,:,2) = zeros(DataSize);
-
-uZXd(:,:,2) = zeros(DataSize);
-uZYd(:,:,2) = zeros(DataSize);
-uZZd(:,:,2) = zeros(DataSize);
-
-% Mode III
-uXXd(:,:,3) = zeros(DataSize);
-uXYd(:,:,3) = zeros(DataSize);
-uXZd(:,:,3) = 0.5*(Maps.E13-flipud(Maps.E13));
-
-uYXd(:,:,3) = zeros(DataSize);
-uYYd(:,:,3) = zeros(DataSize);
-uYZd(:,:,3) = 0.5*(Maps.E23+flipud(Maps.E23));
-
-uZXd(:,:,3) = 0.5*(Maps.E31-flipud(Maps.E31));
-uZYd(:,:,3) = 0.5*(Maps.E32+flipud(Maps.E32));
-uZZd(:,:,3) = 0.5*(Maps.E33-flipud(Maps.E33));
-
-% Infitisimal strain tensor
-E11d = uXXd;
-E22d = uYYd;
-E33d = uZZd;
-E12d = 1/2*(uXYd+uYXd);
-E13d = 1/2*(uXZd+uZXd);
-E23d = 1/2*(uYZd+uZYd);
-
-if isfield(Maps,'Stiffness')
-    for iR = 1:size(Maps.E11,1)
-        for iC = 1:size(Maps.E11,2)
-            for iM = 1:3
-                straind(iR,iC,iM,:) = [E11d(iR,iC,iM);   E22d(iR,iC,iM);    E33d(iR,iC,iM);...
-                    2*E12d(iR,iC,iM); 2*E13d(iR,iC,iM);  2*E23d(iR,iC,iM)];
-                if exist('xEBSD','var')
-                    %solve the (HR-EBSD) boundary condition
-                    K1=straind(iR,iC,iM,1)-straind(iR,iC,iM,3);
-                    K2=straind(iR,iC,iM,2)-straind(iR,iC,iM,3);
-                    K3=straind(iR,iC,iM,4)*Maps.Stiffness(4,3)+...
-                        straind(iR,iC,iM,5)*Maps.Stiffness(5,3)+...
-                        straind(iR,iC,iM,6)*Maps.Stiffness(6,3);
-                    
-                    e33n=-(K1*Maps.Stiffness(1,3)+K2*Maps.Stiffness(2,3)+K3)/...
-                        (Maps.Stiffness(1,3)+Maps.Stiffness(2,3)+Maps.Stiffness(3,3));
-                    e11n=K1+e33n;
-                    e22n=K2+e33n;
-                    %new strain/stress vector
-                    co = straind(iR,iC,iM,4:6);
-                    straind(iR,iC,iM,:)=[e11n;e22n;e33n;co(:)];
-                end
-                stressd(iR,iC,iM,:) = Maps.Stiffness*squeeze(straind(iR,iC,iM,:));
-                sXXd(iR,iC,iM) = stressd(iR,iC,iM,1);
-                sYYd(iR,iC,iM) = stressd(iR,iC,iM,2);
-                sZZd(iR,iC,iM) = stressd(iR,iC,iM,3);
-                sXYd(iR,iC,iM) = stressd(iR,iC,iM,4);
-                sXZd(iR,iC,iM) = stressd(iR,iC,iM,5);
-                sYZd(iR,iC,iM) = stressd(iR,iC,iM,6);
-            end
-        end
-    end
-    E11d = squeeze(straind(:,:,:,1));
-    E22d = squeeze(straind(:,:,:,2));
-    E33d = squeeze(straind(:,:,:,3));
-    E12d = 0.5*squeeze(straind(:,:,:,4));
-    E13d = 0.5*squeeze(straind(:,:,:,5));
-    E23d = 0.5*squeeze(straind(:,:,:,6));
-else    % Chauchy stress tensor, assming linear-elastic, isotropic material for
-    % plane stress conditions
-    Maps.G = Maps.E/(2*(1 + Maps.nu));
-    sXXd = Maps.E/(1-Maps.nu^2)*(E11d+Maps.nu*(E22d+E33d));
-    sYYd = Maps.E/(1-Maps.nu^2)*(E22d+Maps.nu*(E11d+E33d));
-    sZZd = Maps.E/(1-Maps.nu^2)*(E33d+Maps.nu*(E11d+E22d));
-    sXYd = 2*Maps.G*E12d;
-    sXZd = 2*Maps.G*E13d;
-    sYZd = 2*Maps.G*E23d;
-end
-Wd = 0.5*(E11d.*sXXd+E22d.*sYYd+E33d.*sZZd+2*E12d.*sXYd+2*E13d.*sXZd+2*E23d.*sYZd);
-
-plot_DecomposedStrain(E11d,E22d,E33d,E12d,E13d,E23d,Maps);
-if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '\Strain_I_II_III.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '\Strain_I_II_III.tif']);  close
-end
-
-%%
-% Generate q field
-celw = 1;  % Width of area contour. Has to be an odd number.
-dQdX = ones(DataSize)/(Maps.stepsize*celw);
-dQdX = flipud(tril(flipud(tril(dQdX))))-flipud(triu(flipud(triu(dQdX))));
-dQdY = dQdX';
-dQdX(dQdX.*dQdY~=0) = 0;
-% Domain integral
-dA = ones(DataSize).*Maps.stepsize^2;
-JAd = ((sXXd.*uXXd+sXYd.*uYXd+sXZd.*uZXd-Wd).*dQdX+(sYYd.*uYXd+sXYd.*uXXd+...
-    sYZd.*uZXd).*dQdY).*dA;
-% Contour selection
-mid = floor(DataSize(1)/2);
-[a,b] = meshgrid(1:DataSize(1));
-linecon=round(max((abs(a-mid-1/2)),abs(b-mid-1/2)));
-% Summation of integrals
-for ii = 1:mid-1
-    areaID = linecon>=(ii-floor(celw/2)) & linecon<=(ii+floor(celw/2));
-    J.JKIII(:,ii,:) = sum(sum(JAd.*areaID,'omitnan'),'omitnan');
+    J.Raw(:,ii,:) = sum(sum(JAd.*areaID,'omitnan'),'omitnan');
 end
 
 %% Equivalent SIF
-if exist('xEBSD','var')% Mode I & II plane strain conditions
-    %     if strcmp(Maps.stressstate,'plane_stress')
-    %         J.KRaw(1:2,:) = sqrt(abs(J.JKIII(1:2,:))*Maps.E);
-    %     else
-    J.KRaw(1:2,:) = sqrt(abs(J.JKIII(1:2,:))*Maps.E)/sqrt((1-Maps.nu^2));
-    %     end
-else
-    J.KRaw(1:2,:) = sqrt(abs(J.JKIII(1:2,:))*Maps.E);
-end
-
-J.KRaw(3,:) = sqrt(J.JKIII(3,:)*2*Maps.G);      % Mode III
-J.K.Raw = sum(abs(J.JKIII));
+% to avoid imaginary number (needs to be solved so the code could work for
+% compressive fields
+J.Raw = abs(J.Raw);
+J.KRaw(1:2,:) = sqrt(J.Raw(1:2,:)*Maps.E);
+J.KRaw(3,:) = sqrt(J.Raw(3,:)*2*Maps.G);      % Mode III
+J.Raw = sum(J.Raw); 
 
 %%
-figure; plot(J.Raw); hold; plot(J.K.Raw); legend('J','J_K')%trim acess
+figure; plot(J.Raw); legend('J')%trim acess
 set(gcf,'position',[98 311 1481 667])
 text(1:length(J.Raw),J.Raw,string([1:length(J.Raw)]))
 oh = input('where to cut the contour? '); close
 
 %%
 J.Raw = J.Raw(1:oh);
-J.K.Raw = J.K.Raw(1:oh);
-Kd = sqrt(real(J.KRaw).^2+imag(J.KRaw).^2);
-Kd = Kd(:,1:oh);
-KI.Raw   = Kd(1,:)*1e-6;
-KII.Raw  = Kd(2,:)*1e-6;
-KIII.Raw = Kd(3,:)*1e-6;
+J.KRaw = J.KRaw(:,1:oh);
+KI.Raw   = J.KRaw(1,:)*1e-6;
+KII.Raw  = J.KRaw(2,:)*1e-6;
+KIII.Raw = J.KRaw(3,:)*1e-6;
 contrs   = length(J.Raw);        contrs = contrs - round(contrs*0.4);
 dic = real(ceil(-log10(nanmean(rmoutliers(J.Raw(contrs:end))))))+2;
 if dic<1;       dic = 1;    end
 J.true   = round(mean(rmoutliers(J.Raw(contrs:end))),dic);
 J.div    = round(std(rmoutliers(J.Raw(contrs:end)),1),dic);
-J.K.true = round(mean(rmoutliers(J.K.Raw(contrs:end))),dic);
-J.K.div  = round(std(rmoutliers(J.K.Raw(contrs:end)),1),dic);
 KI.true  = round(mean(rmoutliers(real(KI.Raw(contrs:end)))),dic);
 KI.div   = round(std(rmoutliers(real(KI.Raw(contrs:end))),1),dic);
 KII.true = round(mean(rmoutliers(real(KII.Raw(contrs:end)))),dic);
 KII.div  = round(std(rmoutliers(real(KII.Raw(contrs:end))),1),dic);
 KIII.true= round(mean(rmoutliers(real(KIII.Raw(contrs:end)))),dic);
 KIII.div = round(std(rmoutliers(real(KIII.Raw(contrs:end))),1),dic);
-
+%
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_KI_II_III.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_KI_II_III.tif']);  %  close all
-    save([fileparts(Maps.SavingD) '\KIII_2D_v2.mat'],'Maps','J','KI','KII','KIII','saf');
+    saveas(gcf, [fileparts(Maps.SavingD) '\J_K.fig']);
+    saveas(gcf, [fileparts(Maps.SavingD) '\J_K.tif']);  close all
+    save([fileparts(Maps.SavingD) '\KIII_2D.mat'],'Maps','J','KI','KII','KIII','saf');
+end
+%}
+end
+
+%%
+function [du_dx,De_E,De_S] = decomposeA0(Maps)
+for iV=1:3
+    for xi=1:3
+        if isfield(Maps,'A11') 
+            % for xEBSD the full components are avilable we will use the stmmerical
+            % components for strain and stress calculations and the rest for
+            % J-intergal calcualtions
+            eval(sprintf('A(:,:,iV,xi) = Maps.A%d%d;',iV,xi));
+        else
+            eval(sprintf('A(:,:,iV,xi) = Maps.E%d%d;',iV,xi));
+        end
+    end
+end
+% Mode I
+du_dx(:,:,1,1,1) = 0.5*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))));
+du_dx(:,:,1,2,1) = 0.5*(squeeze(A(:,:,1,2)) - flipud(squeeze(A(:,:,1,2))));
+du_dx(:,:,1,3,1) = 0.5*(squeeze(A(:,:,1,3)) + flipud(squeeze(A(:,:,1,3))));
+
+du_dx(:,:,2,1,1) = 0.5*(squeeze(A(:,:,2,1)) - flipud(squeeze(A(:,:,2,1))));
+du_dx(:,:,2,2,1) = 0.5*(squeeze(A(:,:,2,2)) + flipud(squeeze(A(:,:,2,2))));
+du_dx(:,:,2,3,1) = 0.5*(squeeze(A(:,:,2,3)) - flipud(squeeze(A(:,:,2,3))));
+
+du_dx(:,:,3,1,1) = 0.5*(squeeze(A(:,:,3,1)) + flipud(squeeze(A(:,:,3,1))));
+du_dx(:,:,3,2,1) = 0.5*(squeeze(A(:,:,3,2)) - flipud(squeeze(A(:,:,3,2))));
+du_dx(:,:,3,3,1) = 0.5*(squeeze(A(:,:,3,3)) + flipud(squeeze(A(:,:,3,3))));
+
+% Mode II
+du_dx(:,:,1,1,2) = 0.5*(squeeze(A(:,:,1,1)) - flipud(squeeze(A(:,:,1,1))));
+du_dx(:,:,1,2,2) = 0.5*(squeeze(A(:,:,1,2)) + flipud(squeeze(A(:,:,1,2))));
+du_dx(:,:,1,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+
+du_dx(:,:,2,1,2) = 0.5*(squeeze(A(:,:,2,1)) + flipud(squeeze(A(:,:,2,1))));
+du_dx(:,:,2,2,2) = 0.5*(squeeze(A(:,:,2,2)) - flipud(squeeze(A(:,:,2,2))));
+du_dx(:,:,2,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+
+du_dx(:,:,3,1,2) = zeros(size(squeeze(A(:,:,1,1))));
+du_dx(:,:,3,2,2) = zeros(size(squeeze(A(:,:,1,1))));
+du_dx(:,:,3,3,2) = 0.5*(squeeze(A(:,:,3,3)) - flipud(squeeze(A(:,:,3,3))));
+
+% Mode III
+du_dx(:,:,1,1,3) = zeros(size(squeeze(A(:,:,1,1))));
+du_dx(:,:,1,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+du_dx(:,:,1,3,3) = 0.5*(squeeze(A(:,:,1,3)) - flipud(squeeze(A(:,:,1,3))));
+
+du_dx(:,:,2,1,3) = zeros(size(squeeze(A(:,:,1,1))));
+du_dx(:,:,2,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+du_dx(:,:,2,3,3) = 0.5*(squeeze(A(:,:,2,3)) + flipud(squeeze(A(:,:,2,3))));
+
+du_dx(:,:,3,1,3) = 0.5*(squeeze(A(:,:,3,1)) - flipud(squeeze(A(:,:,3,1))));
+du_dx(:,:,3,2,3) = 0.5*(squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
+du_dx(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
+
+tmp = permute(du_dx,[1,2,5,3,4]);
+if isfield(Maps,'A11')
+    for iV=1:3
+        for yi=1:size(du_dx,1)
+            for xi=1:size(du_dx,2)
+                A0=permute(tmp(yi,xi,iV,:,:),[4 5 1 2 3]);
+%                 [a,~,c]=svd(A0);             R(yi,xi,:,:,iV)=a*c';
+                strain=0.5*(A0.'*A0-eye(3));
+                e_vec=[strain(1,1);strain(2,2);strain(3,3);2*strain(2,1);2*strain(3,1);2*strain(3,2)];
+                
+                %solve the boundary condition
+                K1=e_vec(1)-e_vec(3);
+                K2=e_vec(2)-e_vec(3);
+                K3=e_vec(4)*Maps.Stiffness(4,3)+e_vec(5)*...
+                    Maps.Stiffness(5,3)+e_vec(6)*Maps.Stiffness(6,3);
+                
+                e33n=-(K1*Maps.Stiffness(1,3)+K2*Maps.Stiffness(2,3)+K3)/...
+                      (Maps.Stiffness(1,3)+Maps.Stiffness(2,3)+Maps.Stiffness(3,3));
+                e11n=K1+e33n;
+                e22n=K2+e33n;
+                
+                e_voight = [e11n;e22n;e33n;e_vec(4:6)];%new strain vector
+                s_voight = Maps.Stiffness*e_voight;%stress
+                
+                %convert to the tensors
+                De_S(yi,xi,:,:,iV) = [s_voight(1),s_voight(4),s_voight(5);
+                                      s_voight(4),s_voight(2),s_voight(6);
+                                      s_voight(5),s_voight(6),s_voight(3)];
+                De_E(yi,xi,:,:,iV)=  [e_voight(1),  e_voight(4)/2,e_voight(5)/2;
+                                      e_voight(4)/2,e_voight(2),  e_voight(6)/2;
+                                      e_voight(5)/2,e_voight(6)/2,e_voight(3)];
+            end
+        end
+    end
+else
+    if ~isfield(Maps,'Stiffness') 
+        De_E = du_dx;
+        % Chauchy stress tensor, assming linear-elastic, isotropic material for
+        De_S(:,:,1,1,:) = Maps.E/(1-Maps.nu^2)*(De_E(:,:,1,1,:) + ...
+            Maps.nu*(De_E(:,:,2,2,:) + De_E(:,:,3,3,:)));
+        De_S(:,:,2,2,:) = Maps.E/(1-Maps.nu^2)*(De_E(:,:,2,2,:) + ...
+            Maps.nu*(De_E(:,:,1,1,:) + De_E(:,:,3,3,:)));
+        De_S(:,:,3,3,:) = Maps.E/(1-Maps.nu^2)*(De_E(:,:,3,3,:) + ...
+            Maps.nu*(De_E(:,:,1,1,:) + De_E(:,:,2,2,:)));
+        De_S(:,:,1,2,:) = Maps.G*(De_E(:,:,1,2,:) + De_E(:,:,2,1,:));
+        De_S(:,:,2,1,:) = Maps.G*(De_E(:,:,1,2,:) + De_E(:,:,2,1,:));
+        De_S(:,:,1,3,:) = Maps.G*(De_E(:,:,1,3,:) + De_E(:,:,3,1,:));
+        De_S(:,:,3,1,:) = Maps.G*(De_E(:,:,1,3,:) + De_E(:,:,3,1,:));
+        De_S(:,:,2,3,:) = Maps.G*(De_E(:,:,2,3,:) + De_E(:,:,3,2,:));
+        De_S(:,:,3,2,:) = Maps.G*(De_E(:,:,2,3,:) + De_E(:,:,3,2,:));
+    else% ansitropic material
+        for yi = 1:size(Maps.E11,1)
+            for xi = 1:size(Maps.E11,2)
+                for iV = 1:3
+                    e_voight = [du_dx(yi,xi,1,1,iV);    du_dx(yi,xi,2,2,iV);...
+                                du_dx(yi,xi,3,3,iV);   ... 
+                                du_dx(yi,xi,1,2,iV) + du_dx(yi,xi,2,1,iV); ...
+                                du_dx(yi,xi,1,3,iV) + du_dx(yi,xi,3,1,iV); ...
+                                du_dx(yi,xi,2,3,iV) + du_dx(yi,xi,3,2,iV)];
+                    s_voight = Maps.Stiffness*e_voight;
+                    De_S(yi,xi,:,:,iV) = [s_voight(1),s_voight(4),s_voight(5);
+                                          s_voight(4),s_voight(2),s_voight(6);
+                                          s_voight(5),s_voight(6),s_voight(3)];
+                    De_E(yi,xi,:,:,iV)=[e_voight(1),  e_voight(4)/2,e_voight(5)/2;
+                                        e_voight(4)/2,e_voight(2),  e_voight(6)/2;
+                                        e_voight(5)/2,e_voight(6)/2,e_voight(3)];
+                end
+            end
+        end
+    end
 end
 end
 
+%%
 function [ alldata,dataum ] = reshapeStrain( raw_data )
 %PROCESS_DATA Summary of this function goes here
 %   Detailed explanation goes here
@@ -441,7 +417,7 @@ alldata = [dataum.X(:)      dataum.Y(:)     dataum.Z(:)     dataum.E11(:) ...
     dataum.E23(:)    dataum.E31(:)   dataum.E32(:)   dataum.E33(:)];
 
 end
-
+%%
 function [E,v,G,Co] = effectiveE_nu(C)
 % this function caclulates effective Youn modulus and Possion ratio for a
 % ansitropic material based on this paper
@@ -453,16 +429,16 @@ S = C^-1;
 BR = 1/(3*S(1,1)+6*S(1,2));             % Reuss bulk modulus
 GR = 5/(4*S(1,1)-4*S(1,2)+3*S(4,4));   % Reuss shear modulus
 
-B = (BR+BV)/2;                          % Hillâ€™s average bulk modulus
-G = (GR+GV)/2;                          % Hillâ€™s average shear modulus
-E = 9*B*G/(3*B+G);                      % Youngâ€™s modulus (E)
-v = (3*B-E)/(6*B);                      % Poissonâ€™s ratio
+B = (BR+BV)/2;                          % Hill’s average bulk modulus
+G = (GR+GV)/2;                          % Hill’s average shear modulus
+E = 9*B*G/(3*B+G);                      % Young’s modulus (E)
+v = (3*B-E)/(6*B);                      % Poisson’s ratio
 Co = [];
 
 % K = (C(1,1)+C(2,2)+C(3,3)+2*(C(1,2)+C(2,3)+C(1,2)))/9; % istropic shear Modulus
 % Gv = (C(1,1)+C(2,2)+C(3,3)-(C(1,2)+C(2,3)+C(1,2))+2*(C(4,4)+C(5,5)+C(6,6)))/15; % Bulk Modulus
 
-%% Paper: What is the Youngâ€™s Modulus of Silicon?
+%% Paper: What is the Young’s Modulus of Silicon?
 Cc =C^-1;
 Co.Ex = 1/Cc(1,1);
 Co.Ey = 1/Cc(2,2);
@@ -486,10 +462,13 @@ Co.C = Co.C^-1;
 % delivers minus results!
 if G<0 || E<0 || v<0
     v = 1+(Co.vxz+Co.vyz)/2;
+    if v > 0.5 % for metals
+        v = abs((3*B-E)/(6*B));
+    end
 end
 
 end
-
+%%
 function [Crop] = CroppingEqually(Maps)
 close all;                  fig=subplot(1,1,1);
 imagesc(Maps.X(1,:),Maps.Y(:,1),Maps.E11);
@@ -601,7 +580,69 @@ h.Label.String = [char(949)];
 h.Label.FontSize = 30;
 set([s1 s2 s3 s5 s6 s7 s8 s9],"clim",caxis);
 %}
-set(gcf,'position',[1 -41 1900 1000]);
+set(gcf,'position',[348 59 1396 932]);
+end
+
+%%
+function plot_DecomposedStess(uXXd,uYYd,uZZd,uXYd,uXZd,uYZd,Maps,Saf)
+figure;
+s1=subplot(3,3,1);  	contourf(Maps.X,Maps.Y,Maps.S11*Saf*1e-9,'LineStyle','none');
+title('\sigma_{xx}','fontsize',19);
+axis image; axis off; colormap jet; box off;
+c  =colorbar;	cU(1,:) = c.Limits;     colorbar off;
+s2=subplot(3,3,2);  	contourf(Maps.X,Maps.Y,Maps.S12*Saf*1e-9,'LineStyle','none');
+title('\sigma_{xy}','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(2,:) = c.Limits;     colorbar off;
+s3=subplot(3,3,3);  	contourf(Maps.X,Maps.Y,Maps.S13*Saf*1e-9,'LineStyle','none');
+title('\sigma_{xz}','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(3,:) = c.Limits;     colorbar off;
+s5=subplot(3,3,5);  	contourf(Maps.X,Maps.Y,Maps.S22*Saf*1e-9,'LineStyle','none');
+title('\sigma_{yy}','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(4,:) = c.Limits;     colorbar off;
+s6=subplot(3,3,6);  	contourf(Maps.X,Maps.Y,Maps.S22*Saf*1e-9,'LineStyle','none');
+title('\sigma_{yz}','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(5,:) = c.Limits;    colorbar off;
+s9=subplot(3,3,9);  	contourf(Maps.X,Maps.Y,Maps.S33*Saf*1e-9,'LineStyle','none');
+title('\sigma_{zz}','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(6,:) = c.Limits;     colorbar off;
+addScale([3 3 9],[Maps.X(:) Maps.Y(:)]);
+
+SId   = sqrt(0.5*((uXXd(:,:,1)-uYYd(:,:,1)).^2+(uYYd(:,:,1)-uZZd(:,:,1)).^2+...
+    (uZZd(:,:,1)-uXXd(:,:,1)).^2+ ...
+    (uXYd(:,:,1).^2+uYZd(:,:,1).^2+uXZd(:,:,1).^2).*6));
+SIId  = sqrt(0.5*((uXXd(:,:,2)-uYYd(:,:,2)).^2+(uYYd(:,:,2)-uZZd(:,:,2)).^2+...
+    (uZZd(:,:,2)-uXXd(:,:,2)).^2+ ...
+    (uXYd(:,:,2).^2+uYZd(:,:,2).^2+uXZd(:,:,2).^2).*6));
+SIIId = sqrt(0.5*((uXXd(:,:,3)-uYYd(:,:,3)).^2+(uYYd(:,:,3)-uZZd(:,:,3)).^2+...
+    (uZZd(:,:,3)-uXXd(:,:,3)).^2+ ...
+    (uXYd(:,:,3).^2+uYZd(:,:,3).^2+uXZd(:,:,3).^2).*6));
+
+s4=subplot(3,3,4);  	contourf(Maps.X,Maps.Y,SId*1e-9,'LineStyle','none');
+title('\sigma^{I}_M','fontsize',19);
+axis image; axis off;  box off; colormap jet;
+c  =colorbar;	cU(7,:) = c.Limits;     colorbar off;
+s7=subplot(3,3,7);  	contourf(Maps.X,Maps.Y,SIId*1e-9,'LineStyle','none');
+title('\sigma^{II}_M','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(8,:) = c.Limits;     colorbar off;
+s8=subplot(3,3,8);  	contourf(Maps.X,Maps.Y,SIIId*1e-9,'LineStyle','none');
+title('\sigma^{III}_M','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(9,:) = c.Limits;    colorbar off;
+%
+cbax  = axes('visible', 'off');         cU(abs(cU)==1)=0;
+caxis(cbax,[min(cU(:)) max(cU(:))]);
+h = colorbar(cbax, 'location', 'westoutside','position', [0.9011 0.1211 0.0121 0.7533] );
+h.Label.String = '\sigma [GPa]';
+h.Label.FontSize = 30;
+set([s1 s2 s3 s5 s6 s7 s8 s9],"clim",caxis);
+%}
+set(gcf,'position',[348 59 1396 932]);
 end
 %%
 function plot_JKIII(KI,KII,KIII,J,stepsize,input_unit)
@@ -616,12 +657,12 @@ plot(Contour,KIII.Raw,'k--d','MarkerEdgeColor','k','LineWidth',4');
 ylabel('K (MPa m^{0.5})'); hold off
 if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
 yyaxis right;
-plot(Contour,J.K.Raw,'r--<','MarkerEdgeColor','r','LineWidth',1.5,'MarkerFaceColor','r');
-ylabel('J [J/m^2]');        ylim([0 max(J.K.Raw)+min(J.K.Raw)/4]);
-legend(['K_{I} = '     num2str(KI.true)   ' Â± ' num2str(KI.div)  ' MPa\surdm' ],...
-    ['K_{II} = '       num2str(KII.true)  ' Â± ' num2str(KII.div) ' MPa\surdm' ],...
-    ['K_{III} = '      num2str(KIII.true) ' Â± ' num2str(KIII.div) ' MPa\surdm' ],...
-    ['J_{integral} = ' num2str(J.K.true)    ' Â± ' num2str(J.K.div)   ' J/m^2'],...
+plot(Contour,J.Raw,'r--<','MarkerEdgeColor','r','LineWidth',1.5,'MarkerFaceColor','r');
+ylabel('J [J/m^2]');        ylim([0 max(J.Raw)+min(J.Raw)/4]);
+legend(['K_{I} = '     num2str(KI.true)   ' ± ' num2str(KI.div)  ' MPa\surdm' ],...
+    ['K_{II} = '       num2str(KII.true)  ' ± ' num2str(KII.div) ' MPa\surdm' ],...
+    ['K_{III} = '      num2str(KIII.true) ' ± ' num2str(KIII.div) ' MPa\surdm' ],...
+    ['J_{integral} = ' num2str(J.true)    ' ± ' num2str(J.div)   ' J/m^2'],...
     'location','northoutside','box','off');
 set(gcf,'position',[60,-70,750,1100]);grid on;  box off;
 ax1 = gca;  axPos = ax1.Position;
