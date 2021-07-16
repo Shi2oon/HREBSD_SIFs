@@ -602,7 +602,7 @@ s5=subplot(3,3,5);  	contourf(Maps.X,Maps.Y,Maps.S22*Saf*1e-9,'LineStyle','none'
 title('\sigma_{yy}','fontsize',19);
 axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(4,:) = c.Limits;     colorbar off;
-s6=subplot(3,3,6);  	contourf(Maps.X,Maps.Y,Maps.S22*Saf*1e-9,'LineStyle','none');
+s6=subplot(3,3,6);  	contourf(Maps.X,Maps.Y,Maps.S23*Saf*1e-9,'LineStyle','none');
 title('\sigma_{yz}','fontsize',19);
 axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(5,:) = c.Limits;    colorbar off;
