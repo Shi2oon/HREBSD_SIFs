@@ -48,7 +48,6 @@ if size(Maps,2) > 1
             zeros(size(alldata(:,2)))];
     end
     [~,Maps]=reshapeStrain(alldata);
-    Maps.stepsize = unique(round(diff(unique(Maps.Y(:))),4));
     Maps.units.xy = 'm';
     Maps.units.St = 'Pa';
     if size(MatProp,1) == 6
@@ -62,7 +61,7 @@ end
 %% prepare Data
 imagesc(Maps.E11);axis tight; axis image; axis off
 set(gcf,'position',[737 287 955 709]);
-%
+%{
 opts.Interpreter = 'tex';       % Include the desired Default answer
 opts.Default     = 'N';         % Use the TeX interpreter to format the question
 quest            = 'Do you want to Crop and Centre the Crack tip';
@@ -79,17 +78,27 @@ opts.Default     = 'L';         % Use the TeX interpreter to format the question
 quest            = 'Is the crack on your left or right ?';
 answer           = questdlg(quest,'Boundary Condition','L','R', opts);
 if strcmpi(answer,'R') % crop data
-%}
-Maps.E11 = flip(flip(Maps.E11,1),2);    Maps.E12 = flip(flip(Maps.E12,1),2);
-Maps.E13 = flip(flip(Maps.E13,1),2);
-Maps.E21 = flip(flip(Maps.E21,1),2);    Maps.E22 = flip(flip(Maps.E22,1),2);
-Maps.E23 = flip(flip(Maps.E23,1),2);
-Maps.E31 = flip(flip(Maps.E31,1),2);    Maps.E32 = flip(flip(Maps.E32,1),2);
-Maps.E33 = flip(flip(Maps.E33,1),2);
-end
+    %}
+    Maps.E11 = flip(flip(Maps.E11,1),2);    Maps.E12 = flip(flip(Maps.E12,1),2);
+    Maps.E13 = flip(flip(Maps.E13,1),2);
+    Maps.E21 = flip(flip(Maps.E21,1),2);    Maps.E22 = flip(flip(Maps.E22,1),2);
+    Maps.E23 = flip(flip(Maps.E23,1),2);
+    Maps.E31 = flip(flip(Maps.E31,1),2);    Maps.E32 = flip(flip(Maps.E32,1),2);
+    Maps.E33 = flip(flip(Maps.E33,1),2);
+    if exist('xEBSD','var')
+        Maps.S11 = flip(flip(Maps.S11,1),2);    Maps.S12 = flip(flip(Maps.S12,1),2);
+        Maps.S13 = flip(flip(Maps.S13,1),2);
+        Maps.S21 = flip(flip(Maps.S21,1),2);    Maps.S22 = flip(flip(Maps.S22,1),2);
+        Maps.S23 = flip(flip(Maps.S23,1),2);
+        Maps.S31 = flip(flip(Maps.S31,1),2);    Maps.S32 = flip(flip(Maps.S32,1),2);
+        Maps.S33 = flip(flip(Maps.S33,1),2);
+    end
+% end
 close
 
 %%
+%  comment this out if you want to use the displacement derviatives
+if isfield(Maps,'A11'); Maps = rmfield(Maps,'A11'); end
 switch Maps.units.St
     case 'Pa'
         Saf = 1;
@@ -108,11 +117,9 @@ else
     Maps.E = Maps.E*Saf;
     Maps.G = Maps.E/(2*(1 + Maps.nu));
 end
-if exist('xEBSD','var')
+if strcmpi(Maps.stressstat,'plane_strain') || exist('xEBSD','var')
     Maps.E = Maps.E/(1-Maps.nu^2);% for HR-EBSD plane strain conditions
-    Maps.G = Maps.G/(1-Maps.nu^2);
-    %  comment this out if you want to use the displacement derviatives
-    Maps = rmfield(Maps,'A11');
+    Maps.G = Maps.E/(2*(1 + Maps.nu));
 end
 
 switch Maps.units.xy
@@ -125,7 +132,8 @@ switch Maps.units.xy
     case 'nm'
         saf = 1e-9;
 end
-Maps.stepsize = Maps.stepsize*saf;
+try;    Maps.stepsize = Maps.stepsize*saf;
+catch;  Maps.stepsize = unique(round(diff(unique(Maps.Y(:))),4))*saf; end
 Maps.units.St = 'Pa';        Maps.units.xy = 'm';
 DataSize = [size(Maps.E11),1];
 
@@ -140,8 +148,8 @@ if exist('xEBSD','var')
     plot_DecomposedStess(S(:,:,1,1,:),S(:,:,2,2,:),S(:,:,3,3,:),S(:,:,1,2,:),...
                          S(:,:,1,3,:),S(:,:,2,3,:),Maps,Saf);
     if isfield(Maps,'SavingD')
-        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Stress.fig']);
-        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Stress.tif']);  close
+        saveas(gcf, [fileparts(Maps.SavingD) 'Decomposed_Stress.fig']);
+        saveas(gcf, [fileparts(Maps.SavingD) 'Decomposed_Stress.tif']);  close
     end
 else
     plot_DecomposedStrain(E(:,:,1,1,:),E(:,:,2,2,:),E(:,:,3,3,:),E(:,:,1,2,:),...
@@ -189,17 +197,18 @@ end
 J.Raw = abs(J.Raw);
 J.KRaw(1:2,:) = sqrt(J.Raw(1:2,:)*Maps.E);
 J.KRaw(3,:) = sqrt(J.Raw(3,:)*2*Maps.G);      % Mode III
+J.JRaw = J.Raw;
 J.Raw = sum(J.Raw); 
 
 %%
-figure; plot(J.Raw); legend('J')%trim acess
-set(gcf,'position',[98 311 1481 667])
-text(1:length(J.Raw),J.Raw,string([1:length(J.Raw)]))
-oh = input('where to cut the contour? '); close
+% figure; plot(J.Raw); legend('J')%trim acess
+% set(gcf,'position',[98 311 1481 667])
+% text(1:length(J.Raw),J.Raw,string([1:length(J.Raw)]))
+oh = 14;%input('where to cut the contour? '); close
 
 %%
-J.Raw = J.Raw(1:oh);
-J.KRaw = J.KRaw(:,1:oh);
+J.Raw    = J.Raw(1:oh);
+J.KRaw   = J.KRaw(:,1:oh);
 KI.Raw   = J.KRaw(1,:)*1e-6;
 KII.Raw  = J.KRaw(2,:)*1e-6;
 KIII.Raw = J.KRaw(3,:)*1e-6;
@@ -214,7 +223,7 @@ KII.true = round(mean(rmoutliers(real(KII.Raw(contrs:end)))),dic);
 KII.div  = round(std(rmoutliers(real(KII.Raw(contrs:end))),1),dic);
 KIII.true= round(mean(rmoutliers(real(KIII.Raw(contrs:end)))),dic);
 KIII.div = round(std(rmoutliers(real(KIII.Raw(contrs:end))),1),dic);
-%
+%{
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
     saveas(gcf, [fileparts(Maps.SavingD) '\J_K.fig']);
@@ -238,6 +247,7 @@ for iV=1:3
         end
     end
 end
+%
 % Mode I
 du_dx(:,:,1,1,1) = 0.5*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))));
 du_dx(:,:,1,2,1) = 0.5*(squeeze(A(:,:,1,2)) - flipud(squeeze(A(:,:,1,2))));
@@ -276,7 +286,53 @@ du_dx(:,:,2,3,3) = 0.5*(squeeze(A(:,:,2,3)) + flipud(squeeze(A(:,:,2,3))));
 du_dx(:,:,3,1,3) = 0.5*(squeeze(A(:,:,3,1)) - flipud(squeeze(A(:,:,3,1))));
 du_dx(:,:,3,2,3) = 0.5*(squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
 du_dx(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
+%{
+% Mode I
+du_dx(:,:,1,1,1) = 0.25*2*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))));
+du_dx(:,:,1,2,1) = 0.25*(squeeze(A(:,:,1,2)) + flipud(squeeze(A(:,:,1,2))) ...
+                       + squeeze(A(:,:,2,1)) - flipud(squeeze(A(:,:,2,1))));
+du_dx(:,:,1,3,1) = 0.25*(squeeze(A(:,:,1,3)) + flipud(squeeze(A(:,:,1,3))) ...
+                       + squeeze(A(:,:,3,1)) + flipud(squeeze(A(:,:,3,1))));
 
+du_dx(:,:,2,1,1) = du_dx(:,:,1,2,1);
+du_dx(:,:,2,2,1) = 0.25*2*(squeeze(A(:,:,2,2)) - flipud(squeeze(A(:,:,2,2))));
+du_dx(:,:,2,3,1) = 0.25*(squeeze(A(:,:,2,3)) - flipud(squeeze(A(:,:,2,3))) ...
+                       + squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
+
+du_dx(:,:,3,1,1) = du_dx(:,:,1,3,1);
+du_dx(:,:,3,2,1) = du_dx(:,:,2,3,1);
+du_dx(:,:,3,3,1) = 0.25*2*(squeeze(A(:,:,3,3)) + flipud(squeeze(A(:,:,3,3))));
+
+% Mode II
+du_dx(:,:,1,1,2) = 0.25*2*(squeeze(A(:,:,1,1)) - flipud(squeeze(A(:,:,1,1))));
+du_dx(:,:,1,2,2) = 0.25*(squeeze(A(:,:,1,2)) - flipud(squeeze(A(:,:,1,2))) ...
+                       + squeeze(A(:,:,2,1)) + flipud(squeeze(A(:,:,2,1))));
+du_dx(:,:,1,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+
+du_dx(:,:,2,1,2) = du_dx(:,:,1,2,2);
+du_dx(:,:,2,2,2) = 0.25*2*(squeeze(A(:,:,2,2)) + flipud(squeeze(A(:,:,2,2))));
+du_dx(:,:,2,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+
+du_dx(:,:,3,1,2) = du_dx(:,:,1,3,2);
+du_dx(:,:,3,2,2) = du_dx(:,:,2,3,2);
+du_dx(:,:,3,3,2) = 0.25*2*(squeeze(A(:,:,3,3)) - flipud(squeeze(A(:,:,3,3))));
+
+% Mode III
+du_dx(:,:,1,1,3) = zeros(size(squeeze(A(:,:,1,1))));
+du_dx(:,:,1,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+du_dx(:,:,1,3,3) = 0.25*(squeeze(A(:,:,1,3)) - flipud(squeeze(A(:,:,1,3))) ...
+                       + squeeze(A(:,:,3,1)) - flipud(squeeze(A(:,:,3,1))));
+
+du_dx(:,:,2,1,3) = du_dx(:,:,1,2,3);                   
+du_dx(:,:,2,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+du_dx(:,:,2,3,3) = 0.25*(squeeze(A(:,:,2,3)) + flipud(squeeze(A(:,:,2,3))) ...
+                       + squeeze(A(:,:,3,2)) - flipud(squeeze(A(:,:,3,2))));
+
+du_dx(:,:,3,1,3) = du_dx(:,:,1,3,3);
+du_dx(:,:,3,2,3) = du_dx(:,:,2,3,3);
+du_dx(:,:,3,3,1) = zeros(size(squeeze(A(:,:,1,1))));
+
+%}
 tmp = permute(du_dx,[1,2,5,3,4]);
 if isfield(Maps,'A11')
     for iV=1:3
@@ -407,7 +463,7 @@ for iRow = 1:nRows % loop rows
                 dataum.E23(iRow,iCol,iDep) = E23t;
                 dataum.E31(iRow,iCol,iDep) = E31t;
                 dataum.E32(iRow,iCol,iDep) = E32t;
-                dataum.E23(iRow,iCol,iDep) = E33t;
+                dataum.E33(iRow,iCol,iDep) = E33t;
             end
         end
     end
@@ -460,10 +516,10 @@ Co.C = Co.C^-1;
 
 %% a different approach as sometime the first approach sometimes
 % delivers minus results!
-if G<0 || E<0 || v<0
+if G<0 || E<0 || v<0 || v > 0.5
     v = 1+(Co.vxz+Co.vyz)/2;
     if v > 0.5 % for metals
-        v = abs((3*B-E)/(6*B));
+        v = abs((3*BV-E)/(6*BV));
     end
 end
 
@@ -679,6 +735,6 @@ ax2.XLim = [0 length(Contour)+1];     ax1.XLim = [0 max(Contour)+stepsize];
 if strcmpi(input_unit,'um')
     input_unit = '\mum';
 end
-ax1.XLabel.String = ['Contour Length [' input_unit ']'];
+ax1.XLabel.String = ['Contour Distance [' input_unit ']'];
 ax2.XLabel.String = 'Contour Number';
 end
