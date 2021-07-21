@@ -61,7 +61,7 @@ end
 %% prepare Data
 imagesc(Maps.E11);axis tight; axis image; axis off
 set(gcf,'position',[737 287 955 709]);
-%{
+%
 opts.Interpreter = 'tex';       % Include the desired Default answer
 opts.Default     = 'N';         % Use the TeX interpreter to format the question
 quest            = 'Do you want to Crop and Centre the Crack tip';
@@ -93,7 +93,7 @@ if strcmpi(answer,'R') % crop data
         Maps.S31 = flip(flip(Maps.S31,1),2);    Maps.S32 = flip(flip(Maps.S32,1),2);
         Maps.S33 = flip(flip(Maps.S33,1),2);
     end
-% end
+end
 close
 
 %%
@@ -223,7 +223,7 @@ KII.true = round(mean(rmoutliers(real(KII.Raw(contrs:end)))),dic);
 KII.div  = round(std(rmoutliers(real(KII.Raw(contrs:end))),1),dic);
 KIII.true= round(mean(rmoutliers(real(KIII.Raw(contrs:end)))),dic);
 KIII.div = round(std(rmoutliers(real(KIII.Raw(contrs:end))),1),dic);
-%{
+%
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
     saveas(gcf, [fileparts(Maps.SavingD) '\J_K.fig']);
@@ -247,114 +247,107 @@ for iV=1:3
         end
     end
 end
-%
-% Mode I
-du_dx(:,:,1,1,1) = 0.5*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))));
-du_dx(:,:,1,2,1) = 0.5*(squeeze(A(:,:,1,2)) - flipud(squeeze(A(:,:,1,2))));
-du_dx(:,:,1,3,1) = 0.5*(squeeze(A(:,:,1,3)) + flipud(squeeze(A(:,:,1,3))));
 
-du_dx(:,:,2,1,1) = 0.5*(squeeze(A(:,:,2,1)) - flipud(squeeze(A(:,:,2,1))));
-du_dx(:,:,2,2,1) = 0.5*(squeeze(A(:,:,2,2)) + flipud(squeeze(A(:,:,2,2))));
-du_dx(:,:,2,3,1) = 0.5*(squeeze(A(:,:,2,3)) - flipud(squeeze(A(:,:,2,3))));
+%% decompostion
+if ~isfield(Maps,'A11') 
+    % Mode I
+    du_dx(:,:,1,1,1) = 0.5*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))));
+    du_dx(:,:,1,2,1) = 0.5*(squeeze(A(:,:,1,2)) - flipud(squeeze(A(:,:,1,2))));
+    du_dx(:,:,1,3,1) = 0.5*(squeeze(A(:,:,1,3)) + flipud(squeeze(A(:,:,1,3))));
+    du_dx(:,:,2,1,1) = 0.5*(squeeze(A(:,:,2,1)) - flipud(squeeze(A(:,:,2,1))));
+    du_dx(:,:,2,2,1) = 0.5*(squeeze(A(:,:,2,2)) + flipud(squeeze(A(:,:,2,2))));
+    du_dx(:,:,2,3,1) = 0.5*(squeeze(A(:,:,2,3)) - flipud(squeeze(A(:,:,2,3))));
+    du_dx(:,:,3,1,1) = 0.5*(squeeze(A(:,:,3,1)) + flipud(squeeze(A(:,:,3,1))));
+    du_dx(:,:,3,2,1) = 0.5*(squeeze(A(:,:,3,2)) - flipud(squeeze(A(:,:,3,2))));
+    du_dx(:,:,3,3,1) = 0.5*(squeeze(A(:,:,3,3)) + flipud(squeeze(A(:,:,3,3))));
+    
+    % Mode II
+    du_dx(:,:,1,1,2) = 0.5*(squeeze(A(:,:,1,1)) - flipud(squeeze(A(:,:,1,1))));
+    du_dx(:,:,1,2,2) = 0.5*(squeeze(A(:,:,1,2)) + flipud(squeeze(A(:,:,1,2))));
+    du_dx(:,:,1,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,2,1,2) = 0.5*(squeeze(A(:,:,2,1)) + flipud(squeeze(A(:,:,2,1))));
+    du_dx(:,:,2,2,2) = 0.5*(squeeze(A(:,:,2,2)) - flipud(squeeze(A(:,:,2,2))));
+    du_dx(:,:,2,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,3,1,2) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,3,2,2) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,3,3,2) = 0.5*(squeeze(A(:,:,3,3)) - flipud(squeeze(A(:,:,3,3))));
+    
+    % Mode III
+    du_dx(:,:,1,1,3) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,1,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,1,3,3) = 0.5*(squeeze(A(:,:,1,3)) - flipud(squeeze(A(:,:,1,3))));
+    du_dx(:,:,2,1,3) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,2,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,2,3,3) = 0.5*(squeeze(A(:,:,2,3)) + flipud(squeeze(A(:,:,2,3))));
+    du_dx(:,:,3,1,3) = 0.5*(squeeze(A(:,:,3,1)) - flipud(squeeze(A(:,:,3,1))));
+    du_dx(:,:,3,2,3) = 0.5*(squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
+    du_dx(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
 
-du_dx(:,:,3,1,1) = 0.5*(squeeze(A(:,:,3,1)) + flipud(squeeze(A(:,:,3,1))));
-du_dx(:,:,3,2,1) = 0.5*(squeeze(A(:,:,3,2)) - flipud(squeeze(A(:,:,3,2))));
-du_dx(:,:,3,3,1) = 0.5*(squeeze(A(:,:,3,3)) + flipud(squeeze(A(:,:,3,3))));
+elseif isfield(Maps,'A11') 
+    % Mode I
+    du_dx(:,:,1,1,1) = 0.25*2*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))));
+    du_dx(:,:,1,2,1) = 0.25*(squeeze(A(:,:,1,2)) + flipud(squeeze(A(:,:,1,2))) ...
+        + squeeze(A(:,:,2,1)) - flipud(squeeze(A(:,:,2,1))));
+    du_dx(:,:,1,3,1) = 0.25*(squeeze(A(:,:,1,3)) + flipud(squeeze(A(:,:,1,3))) ...
+        + squeeze(A(:,:,3,1)) + flipud(squeeze(A(:,:,3,1))));
+    du_dx(:,:,2,1,1) = du_dx(:,:,1,2,1);
+    du_dx(:,:,2,2,1) = 0.25*2*(squeeze(A(:,:,2,2)) - flipud(squeeze(A(:,:,2,2))));
+    du_dx(:,:,2,3,1) = 0.25*(squeeze(A(:,:,2,3)) - flipud(squeeze(A(:,:,2,3))) ...
+        + squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
+    du_dx(:,:,3,1,1) = du_dx(:,:,1,3,1);
+    du_dx(:,:,3,2,1) = du_dx(:,:,2,3,1);
+    du_dx(:,:,3,3,1) = 0.25*2*(squeeze(A(:,:,3,3)) + flipud(squeeze(A(:,:,3,3))));
+    
+    % Mode II
+    du_dx(:,:,1,1,2) = 0.25*2*(squeeze(A(:,:,1,1)) - flipud(squeeze(A(:,:,1,1))));
+    du_dx(:,:,1,2,2) = 0.25*(squeeze(A(:,:,1,2)) - flipud(squeeze(A(:,:,1,2))) ...
+        + squeeze(A(:,:,2,1)) + flipud(squeeze(A(:,:,2,1))));
+    du_dx(:,:,1,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,2,1,2) = du_dx(:,:,1,2,2);
+    du_dx(:,:,2,2,2) = 0.25*2*(squeeze(A(:,:,2,2)) + flipud(squeeze(A(:,:,2,2))));
+    du_dx(:,:,2,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,3,1,2) = du_dx(:,:,1,3,2);
+    du_dx(:,:,3,2,2) = du_dx(:,:,2,3,2);
+    du_dx(:,:,3,3,2) = 0.25*2*(squeeze(A(:,:,3,3)) - flipud(squeeze(A(:,:,3,3))));
+    
+    % Mode III
+    du_dx(:,:,1,1,3) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,1,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,1,3,3) = 0.25*(squeeze(A(:,:,1,3)) - flipud(squeeze(A(:,:,1,3))) ...
+        + squeeze(A(:,:,3,1)) - flipud(squeeze(A(:,:,3,1))));
+    du_dx(:,:,2,1,3) = du_dx(:,:,1,2,3);
+    du_dx(:,:,2,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,2,3,3) = 0.25*(squeeze(A(:,:,2,3)) + flipud(squeeze(A(:,:,2,3))) ...
+        + squeeze(A(:,:,3,2)) - flipud(squeeze(A(:,:,3,2))));
+    du_dx(:,:,3,1,3) = du_dx(:,:,1,3,3);
+    du_dx(:,:,3,2,3) = du_dx(:,:,2,3,3);
+    du_dx(:,:,3,3,1) = zeros(size(squeeze(A(:,:,1,1))));
+end
 
-% Mode II
-du_dx(:,:,1,1,2) = 0.5*(squeeze(A(:,:,1,1)) - flipud(squeeze(A(:,:,1,1))));
-du_dx(:,:,1,2,2) = 0.5*(squeeze(A(:,:,1,2)) + flipud(squeeze(A(:,:,1,2))));
-du_dx(:,:,1,3,2) = zeros(size(squeeze(A(:,:,1,1))));
-
-du_dx(:,:,2,1,2) = 0.5*(squeeze(A(:,:,2,1)) + flipud(squeeze(A(:,:,2,1))));
-du_dx(:,:,2,2,2) = 0.5*(squeeze(A(:,:,2,2)) - flipud(squeeze(A(:,:,2,2))));
-du_dx(:,:,2,3,2) = zeros(size(squeeze(A(:,:,1,1))));
-
-du_dx(:,:,3,1,2) = zeros(size(squeeze(A(:,:,1,1))));
-du_dx(:,:,3,2,2) = zeros(size(squeeze(A(:,:,1,1))));
-du_dx(:,:,3,3,2) = 0.5*(squeeze(A(:,:,3,3)) - flipud(squeeze(A(:,:,3,3))));
-
-% Mode III
-du_dx(:,:,1,1,3) = zeros(size(squeeze(A(:,:,1,1))));
-du_dx(:,:,1,2,3) = zeros(size(squeeze(A(:,:,1,1))));
-du_dx(:,:,1,3,3) = 0.5*(squeeze(A(:,:,1,3)) - flipud(squeeze(A(:,:,1,3))));
-
-du_dx(:,:,2,1,3) = zeros(size(squeeze(A(:,:,1,1))));
-du_dx(:,:,2,2,3) = zeros(size(squeeze(A(:,:,1,1))));
-du_dx(:,:,2,3,3) = 0.5*(squeeze(A(:,:,2,3)) + flipud(squeeze(A(:,:,2,3))));
-
-du_dx(:,:,3,1,3) = 0.5*(squeeze(A(:,:,3,1)) - flipud(squeeze(A(:,:,3,1))));
-du_dx(:,:,3,2,3) = 0.5*(squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
-du_dx(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
-%{
-% Mode I
-du_dx(:,:,1,1,1) = 0.25*2*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))));
-du_dx(:,:,1,2,1) = 0.25*(squeeze(A(:,:,1,2)) + flipud(squeeze(A(:,:,1,2))) ...
-                       + squeeze(A(:,:,2,1)) - flipud(squeeze(A(:,:,2,1))));
-du_dx(:,:,1,3,1) = 0.25*(squeeze(A(:,:,1,3)) + flipud(squeeze(A(:,:,1,3))) ...
-                       + squeeze(A(:,:,3,1)) + flipud(squeeze(A(:,:,3,1))));
-
-du_dx(:,:,2,1,1) = du_dx(:,:,1,2,1);
-du_dx(:,:,2,2,1) = 0.25*2*(squeeze(A(:,:,2,2)) - flipud(squeeze(A(:,:,2,2))));
-du_dx(:,:,2,3,1) = 0.25*(squeeze(A(:,:,2,3)) - flipud(squeeze(A(:,:,2,3))) ...
-                       + squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
-
-du_dx(:,:,3,1,1) = du_dx(:,:,1,3,1);
-du_dx(:,:,3,2,1) = du_dx(:,:,2,3,1);
-du_dx(:,:,3,3,1) = 0.25*2*(squeeze(A(:,:,3,3)) + flipud(squeeze(A(:,:,3,3))));
-
-% Mode II
-du_dx(:,:,1,1,2) = 0.25*2*(squeeze(A(:,:,1,1)) - flipud(squeeze(A(:,:,1,1))));
-du_dx(:,:,1,2,2) = 0.25*(squeeze(A(:,:,1,2)) - flipud(squeeze(A(:,:,1,2))) ...
-                       + squeeze(A(:,:,2,1)) + flipud(squeeze(A(:,:,2,1))));
-du_dx(:,:,1,3,2) = zeros(size(squeeze(A(:,:,1,1))));
-
-du_dx(:,:,2,1,2) = du_dx(:,:,1,2,2);
-du_dx(:,:,2,2,2) = 0.25*2*(squeeze(A(:,:,2,2)) + flipud(squeeze(A(:,:,2,2))));
-du_dx(:,:,2,3,2) = zeros(size(squeeze(A(:,:,1,1))));
-
-du_dx(:,:,3,1,2) = du_dx(:,:,1,3,2);
-du_dx(:,:,3,2,2) = du_dx(:,:,2,3,2);
-du_dx(:,:,3,3,2) = 0.25*2*(squeeze(A(:,:,3,3)) - flipud(squeeze(A(:,:,3,3))));
-
-% Mode III
-du_dx(:,:,1,1,3) = zeros(size(squeeze(A(:,:,1,1))));
-du_dx(:,:,1,2,3) = zeros(size(squeeze(A(:,:,1,1))));
-du_dx(:,:,1,3,3) = 0.25*(squeeze(A(:,:,1,3)) - flipud(squeeze(A(:,:,1,3))) ...
-                       + squeeze(A(:,:,3,1)) - flipud(squeeze(A(:,:,3,1))));
-
-du_dx(:,:,2,1,3) = du_dx(:,:,1,2,3);                   
-du_dx(:,:,2,2,3) = zeros(size(squeeze(A(:,:,1,1))));
-du_dx(:,:,2,3,3) = 0.25*(squeeze(A(:,:,2,3)) + flipud(squeeze(A(:,:,2,3))) ...
-                       + squeeze(A(:,:,3,2)) - flipud(squeeze(A(:,:,3,2))));
-
-du_dx(:,:,3,1,3) = du_dx(:,:,1,3,3);
-du_dx(:,:,3,2,3) = du_dx(:,:,2,3,3);
-du_dx(:,:,3,3,1) = zeros(size(squeeze(A(:,:,1,1))));
-
-%}
+%%
 tmp = permute(du_dx,[1,2,5,3,4]);
 if isfield(Maps,'A11')
     for iV=1:3
         for yi=1:size(du_dx,1)
             for xi=1:size(du_dx,2)
                 A0=permute(tmp(yi,xi,iV,:,:),[4 5 1 2 3]);
-%                 [a,~,c]=svd(A0);             R(yi,xi,:,:,iV)=a*c';
+%                 [a,~,c]=svd(A0);             R=a*c';
                 strain=0.5*(A0.'*A0-eye(3));
-                e_vec=[strain(1,1);strain(2,2);strain(3,3);2*strain(2,1);2*strain(3,1);2*strain(3,2)];
-                
+                e_voight=[strain(1,1);strain(2,2);strain(3,3);2*strain(2,1);2*strain(3,1);2*strain(3,2)];
+                % this is in contention
+                %{
                 %solve the boundary condition
-                K1=e_vec(1)-e_vec(3);
-                K2=e_vec(2)-e_vec(3);
-                K3=e_vec(4)*Maps.Stiffness(4,3)+e_vec(5)*...
-                    Maps.Stiffness(5,3)+e_vec(6)*Maps.Stiffness(6,3);
+                K1=e_voight(1)-e_voight(3);
+                K2=e_voight(2)-e_voight(3);
+                K3=e_voight(4)*Maps.Stiffness(4,3)+e_voight(5)*...
+                    Maps.Stiffness(5,3)+e_voight(6)*Maps.Stiffness(6,3);
                 
                 e33n=-(K1*Maps.Stiffness(1,3)+K2*Maps.Stiffness(2,3)+K3)/...
                       (Maps.Stiffness(1,3)+Maps.Stiffness(2,3)+Maps.Stiffness(3,3));
                 e11n=K1+e33n;
                 e22n=K2+e33n;
-                
-                e_voight = [e11n;e22n;e33n;e_vec(4:6)];%new strain vector
+                %}
+                e_voight = [e11n;e22n;e33n;e_voight(4:6)];%new strain vector
                 s_voight = Maps.Stiffness*e_voight;%stress
                 
                 %convert to the tensors
