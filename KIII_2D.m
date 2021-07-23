@@ -35,8 +35,11 @@ close all;
 % volumetric change.
 
 % Example:
-% [alldata,MatProp] = KIII_2D_Calibration(3,1,5);
-% [J,KI,KII,KIII] = KIII_2D(alldata,MatProp); % as desigignated maps
+% [MatProp,~,alldata] = Calibration_2DKIII(3,1,5);
+% [J,KI,KII,KIII] = KIII_2D(alldata,MatProp);% or just MatProp
+% [J,KI,KII,KIII] = KIII_2D(MatProp); % as desigignated maps
+
+% look to the strrcutrure of each variable to see the differance
 
 if size(Maps,2) > 1
     alldata = Maps; clear Maps
@@ -48,16 +51,17 @@ if size(Maps,2) > 1
             zeros(size(alldata(:,2)))];
     end
     [~,Maps]=reshapeStrain(alldata);
-    Maps.units.xy = 'm';
-    Maps.units.St = 'Pa';
     if size(MatProp,1) == 6
         Maps.Stiffness = MatProp;
     else
         Maps.E  = MatProp.E;
         Maps.nu = MatProp.nu;
+        Maps.stressstat = MatProp.stressstat;
+    	Maps.units.xy = MatProp.units.xy;
+        Maps.units.St = MatProp.units.St;
     end
 end
-
+%{
 %% prepare Data
 imagesc(Maps.E11);axis tight; axis image; axis off
 set(gcf,'position',[737 287 955 709]);
@@ -78,7 +82,7 @@ opts.Default     = 'L';         % Use the TeX interpreter to format the question
 quest            = 'Is the crack on your left or right ?';
 answer           = questdlg(quest,'Boundary Condition','L','R', opts);
 if strcmpi(answer,'R') % crop data
-    %}
+    %
     Maps.E11 = flip(flip(Maps.E11,1),2);    Maps.E12 = flip(flip(Maps.E12,1),2);
     Maps.E13 = flip(flip(Maps.E13,1),2);
     Maps.E21 = flip(flip(Maps.E21,1),2);    Maps.E22 = flip(flip(Maps.E22,1),2);
@@ -95,7 +99,7 @@ if strcmpi(answer,'R') % crop data
     end
 end
 close
-
+%}
 %%
 %  comment this out if you want to use the displacement derviatives
 if isfield(Maps,'A11'); Maps = rmfield(Maps,'A11'); end
@@ -117,9 +121,8 @@ else
     Maps.E = Maps.E*Saf;
     Maps.G = Maps.E/(2*(1 + Maps.nu));
 end
-if strcmpi(Maps.stressstat,'plane_strain') || exist('xEBSD','var')
+if strcmpi(Maps.stressstat,'plane_strain')
     Maps.E = Maps.E/(1-Maps.nu^2);% for HR-EBSD plane strain conditions
-    Maps.G = Maps.E/(2*(1 + Maps.nu));
 end
 
 switch Maps.units.xy
@@ -142,7 +145,7 @@ DataSize = [size(Maps.E11),1];
 Wd = 0.5*(E(:,:,1,1,:).*S(:,:,1,1,:) + E(:,:,1,2,:).*S(:,:,1,2,:) + E(:,:,1,3,:).*S(:,:,1,3,:)...
         + E(:,:,2,1,:).*S(:,:,2,1,:) + E(:,:,2,2,:).*S(:,:,2,2,:) + E(:,:,2,3,:).*S(:,:,2,3,:)...
         + E(:,:,3,1,:).*S(:,:,3,1,:) + E(:,:,3,2,:).*S(:,:,3,2,:) + E(:,:,3,3,:).*S(:,:,3,3,:));
-%
+%{
 % Decomposed Plots
 if exist('xEBSD','var')
     plot_DecomposedStess(S(:,:,1,1,:),S(:,:,2,2,:),S(:,:,3,3,:),S(:,:,1,2,:),...
@@ -204,7 +207,7 @@ J.Raw = sum(J.Raw);
 % figure; plot(J.Raw); legend('J')%trim acess
 % set(gcf,'position',[98 311 1481 667])
 % text(1:length(J.Raw),J.Raw,string([1:length(J.Raw)]))
-oh = 14;%input('where to cut the contour? '); close
+oh = 24;%input('where to cut the contour? '); close
 
 %%
 J.Raw    = J.Raw(1:oh);
@@ -215,15 +218,15 @@ KIII.Raw = J.KRaw(3,:)*1e-6;
 contrs   = length(J.Raw);        contrs = contrs - round(contrs*0.4);
 dic = real(ceil(-log10(nanmean(rmoutliers(J.Raw(contrs:end))))))+2;
 if dic<1;       dic = 1;    end
-J.true   = round(mean(rmoutliers(J.Raw(contrs:end))),dic);
-J.div    = round(std(rmoutliers(J.Raw(contrs:end)),1),dic);
-KI.true  = round(mean(rmoutliers(real(KI.Raw(contrs:end)))),dic);
-KI.div   = round(std(rmoutliers(real(KI.Raw(contrs:end))),1),dic);
-KII.true = round(mean(rmoutliers(real(KII.Raw(contrs:end)))),dic);
-KII.div  = round(std(rmoutliers(real(KII.Raw(contrs:end))),1),dic);
-KIII.true= round(mean(rmoutliers(real(KIII.Raw(contrs:end)))),dic);
-KIII.div = round(std(rmoutliers(real(KIII.Raw(contrs:end))),1),dic);
-%
+J.true   = round(mean((J.Raw(contrs:end))),dic);
+J.div    = round(std((J.Raw(contrs:end)),1),dic);
+KI.true  = round(mean(((KI.Raw(contrs:end)))),dic);
+KI.div   = round(std(((KI.Raw(contrs:end))),1),dic);
+KII.true = round(mean(((KII.Raw(contrs:end)))),dic);
+KII.div  = round(std(((KII.Raw(contrs:end))),1),dic);
+KIII.true= round(mean(((KIII.Raw(contrs:end)))),dic);
+KIII.div = round(std(((KIII.Raw(contrs:end))),1),dic);
+%{
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
     saveas(gcf, [fileparts(Maps.SavingD) '\J_K.fig']);
@@ -730,4 +733,33 @@ if strcmpi(input_unit,'um')
 end
 ax1.XLabel.String = ['Contour Distance [' input_unit ']'];
 ax2.XLabel.String = 'Contour Number';
+end
+
+function addScale(No,alldata)
+% funciton to add a measurment line to the graph, you can either input
+% number of the suplots or the exact suplot where you want to add the scale
+% bar
+    if length(No) == 1      && No == 2
+        subplot(1,2,1); AddScalePar(alldata(:,1),alldata(:,2))
+        subplot(1,2,2); AddScalePar(alldata(:,1),alldata(:,2))
+    elseif length(No) == 1  && No == 3
+        subplot(1,3,1); AddScalePar(alldata(:,1),alldata(:,2))
+        subplot(1,3,2); AddScalePar(alldata(:,1),alldata(:,2))
+        subplot(1,3,3); AddScalePar(alldata(:,1),alldata(:,2))
+    elseif length(No) == 1	&& No == 1
+        AddScalePar(alldata(:,1),alldata(:,2));
+    elseif length(No) == 3
+        subplot(No(1),No(2),No(3)); AddScalePar(alldata(:,1),alldata(:,2));
+    end
+end
+
+function AddScalePar(X,Y)
+X = unique(X);         Y = unique(Y);
+hold on; line([X(ceil(end-length(X)*0.05)),X(end-ceil(length(X)*0.15))],...
+            [Y(ceil(length(Y)*0.05)),Y(ceil(length(Y)*0.05))],'Color','k','LineWidth',5)
+ht = text(double(X(end-ceil(length(X)*0.24))),double(Y(ceil(length(Y)*0.14)))...
+    ,[num2str(round(abs(X(ceil(length(X)*0.05))-X(ceil(length(X)*0.15))),1)) '\mum']);
+set(ht,'FontSize',16,'FontWeight','Bold')
+set(gca,'Visible','off')
+hold off
 end
