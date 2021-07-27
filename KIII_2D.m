@@ -61,7 +61,7 @@ if size(Maps,2) > 1
         Maps.units.St = MatProp.units.St;
     end
 end
-%{
+%
 %% prepare Data
 imagesc(Maps.E11);axis tight; axis image; axis off
 set(gcf,'position',[737 287 955 709]);
@@ -76,13 +76,21 @@ if strcmpi(answer,'Y') % crop data
     Maps.E11 = Crop.E11;    Maps.E12 = Crop.E12;    Maps.E13 = Crop.E13;
     Maps.E21 = Crop.E21;    Maps.E22 = Crop.E22;    Maps.E23 = Crop.E23;
     Maps.E31 = Crop.E31;    Maps.E32 = Crop.E32;    Maps.E33 = Crop.E33;
+    
+    Maps.S11 = Crop.S11;    Maps.S12 = Crop.S12;    Maps.S13 = Crop.S13;
+    Maps.S21 = Crop.S21;    Maps.S22 = Crop.S22;    Maps.S23 = Crop.S23;
+    Maps.S31 = Crop.S31;    Maps.S32 = Crop.S32;    Maps.S33 = Crop.S33;
+    
+    Maps.A11 = Crop.A11;    Maps.A12 = Crop.A12;    Maps.A13 = Crop.A13;
+    Maps.A21 = Crop.A21;    Maps.A22 = Crop.A22;    Maps.A23 = Crop.A23;
+    Maps.A31 = Crop.A31;    Maps.A32 = Crop.A32;    Maps.A33 = Crop.A33;
 end
 opts.Interpreter = 'tex';       % Include the desired Default answer
 opts.Default     = 'L';         % Use the TeX interpreter to format the question
 quest            = 'Is the crack on your left or right ?';
 answer           = questdlg(quest,'Boundary Condition','L','R', opts);
 if strcmpi(answer,'R') % crop data
-    %
+    %}
     Maps.E11 = flip(flip(Maps.E11,1),2);    Maps.E12 = flip(flip(Maps.E12,1),2);
     Maps.E13 = flip(flip(Maps.E13,1),2);
     Maps.E21 = flip(flip(Maps.E21,1),2);    Maps.E22 = flip(flip(Maps.E22,1),2);
@@ -96,6 +104,13 @@ if strcmpi(answer,'R') % crop data
         Maps.S23 = flip(flip(Maps.S23,1),2);
         Maps.S31 = flip(flip(Maps.S31,1),2);    Maps.S32 = flip(flip(Maps.S32,1),2);
         Maps.S33 = flip(flip(Maps.S33,1),2);
+        
+        Maps.A11 = flip(flip(Maps.A11,1),2);    Maps.A12 = flip(flip(Maps.A12,1),2);
+        Maps.A13 = flip(flip(Maps.A13,1),2);
+        Maps.A21 = flip(flip(Maps.A21,1),2);    Maps.A22 = flip(flip(Maps.A22,1),2);
+        Maps.A23 = flip(flip(Maps.A23,1),2);
+        Maps.A31 = flip(flip(Maps.A31,1),2);    Maps.A32 = flip(flip(Maps.A32,1),2);
+        Maps.A33 = flip(flip(Maps.A33,1),2);
     end
 end
 close
@@ -120,9 +135,9 @@ if isfield(Maps,'Stiffness')
 else
     Maps.E = Maps.E*Saf;
     Maps.G = Maps.E/(2*(1 + Maps.nu));
-end
-if strcmpi(Maps.stressstat,'plane_strain')
-    Maps.E = Maps.E/(1-Maps.nu^2);% for HR-EBSD plane strain conditions
+    if strcmpi(Maps.stressstat,'plane_strain')
+        Maps.E = Maps.E/(1-Maps.nu^2);% for HR-EBSD plane strain conditions
+    end
 end
 
 switch Maps.units.xy
@@ -145,22 +160,29 @@ DataSize = [size(Maps.E11),1];
 Wd = 0.5*(E(:,:,1,1,:).*S(:,:,1,1,:) + E(:,:,1,2,:).*S(:,:,1,2,:) + E(:,:,1,3,:).*S(:,:,1,3,:)...
         + E(:,:,2,1,:).*S(:,:,2,1,:) + E(:,:,2,2,:).*S(:,:,2,2,:) + E(:,:,2,3,:).*S(:,:,2,3,:)...
         + E(:,:,3,1,:).*S(:,:,3,1,:) + E(:,:,3,2,:).*S(:,:,3,2,:) + E(:,:,3,3,:).*S(:,:,3,3,:));
-%{
+%
 % Decomposed Plots
 if exist('xEBSD','var')
-    plot_DecomposedStess(S(:,:,1,1,:),S(:,:,2,2,:),S(:,:,3,3,:),S(:,:,1,2,:),...
-                         S(:,:,1,3,:),S(:,:,2,3,:),Maps,Saf);
+    plot_DecomposedA(du_dx(:,:,1,1,:),du_dx(:,:,2,2,:),du_dx(:,:,3,3,:),du_dx(:,:,1,2,:),...
+                     du_dx(:,:,1,3,:),du_dx(:,:,2,3,:),Maps);
     if isfield(Maps,'SavingD')
-        saveas(gcf, [fileparts(Maps.SavingD) 'Decomposed_Stress.fig']);
-        saveas(gcf, [fileparts(Maps.SavingD) 'Decomposed_Stress.tif']);  close
+        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_A.fig']);
+        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_A.tif']);  close
     end
 else
     plot_DecomposedStrain(E(:,:,1,1,:),E(:,:,2,2,:),E(:,:,3,3,:),E(:,:,1,2,:),...
                           E(:,:,1,3,:),E(:,:,2,3,:),Maps);
     if isfield(Maps,'SavingD')
-        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Strain.fig']);
-        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Strain.tif']);  close
+        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Strain.fig']);
+        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Strain.tif']);  close
     end
+end
+
+plot_DecomposedStess(S(:,:,1,1,:),S(:,:,2,2,:),S(:,:,3,3,:),S(:,:,1,2,:),...
+                     S(:,:,1,3,:),S(:,:,2,3,:),Maps,Saf);
+if isfield(Maps,'SavingD')
+    saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Stress.fig']);
+    saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Stress.tif']);  close
 end
 %}
 %%
@@ -176,14 +198,10 @@ dQdX(dQdX.*dQdY~=0) = 0;
 % Domain integral
 dA = ones(DataSize).*Maps.stepsize^2;
 
-if exist('xEBSD','var')
-    E = du_dx;
-end
-
-JAd = ((S(:,:,1,1,:).*E(:,:,1,1,:) + S(:,:,1,2,:).*E(:,:,2,1,:)+...
-        S(:,:,1,3,:).*E(:,:,3,1,:) - Wd).*dQdX +  (S(:,:,2,2,:).*...
-        E(:,:,2,1,:) +S(:,:,1,2,:).*E(:,:,1,1,:)+...
-        S(:,:,2,3,:).*E(:,:,3,1,:)).*dQdY).*dA;
+JAd = ((S(:,:,1,1,:).*du_dx(:,:,1,1,:) + S(:,:,1,2,:).*du_dx(:,:,2,1,:)+...
+        S(:,:,1,3,:).*du_dx(:,:,3,1,:) - Wd).*dQdX +  (S(:,:,2,2,:).*...
+        du_dx(:,:,2,1,:) +S(:,:,1,2,:).*du_dx(:,:,1,1,:)+...
+        S(:,:,2,3,:).*du_dx(:,:,3,1,:)).*dQdY).*dA;
 % Contour selection
 mid = floor(DataSize(1)/2);
 [a,b] = meshgrid(1:DataSize(1));
@@ -204,10 +222,10 @@ J.JRaw = J.Raw;
 J.Raw = sum(J.Raw); 
 
 %%
-% figure; plot(J.Raw); legend('J')%trim acess
-% set(gcf,'position',[98 311 1481 667])
-% text(1:length(J.Raw),J.Raw,string([1:length(J.Raw)]))
-oh = 24;%input('where to cut the contour? '); close
+figure; plot(J.Raw); legend('J')%trim acess
+set(gcf,'position',[98 311 1481 667])
+text(1:length(J.Raw),J.Raw,string([1:length(J.Raw)]))
+oh = input('where to cut the contour? '); close
 
 %%
 J.Raw    = J.Raw(1:oh);
@@ -226,12 +244,12 @@ KII.true = round(mean(((KII.Raw(contrs:end)))),dic);
 KII.div  = round(std(((KII.Raw(contrs:end))),1),dic);
 KIII.true= round(mean(((KIII.Raw(contrs:end)))),dic);
 KIII.div = round(std(((KIII.Raw(contrs:end))),1),dic);
-%{
+%
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_K.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_K.tif']);  close all
-    save([fileparts(Maps.SavingD) '\KIII_2D.mat'],'Maps','J','KI','KII','KIII','saf');
+    saveas(gcf, [fileparts(Maps.SavingD) '_J_K.fig']);
+    saveas(gcf, [fileparts(Maps.SavingD) '_J_K.tif']);  close all
+    save([fileparts(Maps.SavingD) '_KIII_2D.mat'],'Maps','J','KI','KII','KIII','saf');
 end
 %}
 end
@@ -252,14 +270,16 @@ for iV=1:3
 end
 
 %% decompostion
-if ~isfield(Maps,'A11') 
+if ~isfield(Maps,'A11') % strain decompostion
     % Mode I
     du_dx(:,:,1,1,1) = 0.5*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))));
     du_dx(:,:,1,2,1) = 0.5*(squeeze(A(:,:,1,2)) - flipud(squeeze(A(:,:,1,2))));
     du_dx(:,:,1,3,1) = 0.5*(squeeze(A(:,:,1,3)) + flipud(squeeze(A(:,:,1,3))));
+    
     du_dx(:,:,2,1,1) = 0.5*(squeeze(A(:,:,2,1)) - flipud(squeeze(A(:,:,2,1))));
     du_dx(:,:,2,2,1) = 0.5*(squeeze(A(:,:,2,2)) + flipud(squeeze(A(:,:,2,2))));
     du_dx(:,:,2,3,1) = 0.5*(squeeze(A(:,:,2,3)) - flipud(squeeze(A(:,:,2,3))));
+    
     du_dx(:,:,3,1,1) = 0.5*(squeeze(A(:,:,3,1)) + flipud(squeeze(A(:,:,3,1))));
     du_dx(:,:,3,2,1) = 0.5*(squeeze(A(:,:,3,2)) - flipud(squeeze(A(:,:,3,2))));
     du_dx(:,:,3,3,1) = 0.5*(squeeze(A(:,:,3,3)) + flipud(squeeze(A(:,:,3,3))));
@@ -268,9 +288,11 @@ if ~isfield(Maps,'A11')
     du_dx(:,:,1,1,2) = 0.5*(squeeze(A(:,:,1,1)) - flipud(squeeze(A(:,:,1,1))));
     du_dx(:,:,1,2,2) = 0.5*(squeeze(A(:,:,1,2)) + flipud(squeeze(A(:,:,1,2))));
     du_dx(:,:,1,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+    
     du_dx(:,:,2,1,2) = 0.5*(squeeze(A(:,:,2,1)) + flipud(squeeze(A(:,:,2,1))));
     du_dx(:,:,2,2,2) = 0.5*(squeeze(A(:,:,2,2)) - flipud(squeeze(A(:,:,2,2))));
     du_dx(:,:,2,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+    
     du_dx(:,:,3,1,2) = zeros(size(squeeze(A(:,:,1,1))));
     du_dx(:,:,3,2,2) = zeros(size(squeeze(A(:,:,1,1))));
     du_dx(:,:,3,3,2) = 0.5*(squeeze(A(:,:,3,3)) - flipud(squeeze(A(:,:,3,3))));
@@ -279,66 +301,129 @@ if ~isfield(Maps,'A11')
     du_dx(:,:,1,1,3) = zeros(size(squeeze(A(:,:,1,1))));
     du_dx(:,:,1,2,3) = zeros(size(squeeze(A(:,:,1,1))));
     du_dx(:,:,1,3,3) = 0.5*(squeeze(A(:,:,1,3)) - flipud(squeeze(A(:,:,1,3))));
+    
     du_dx(:,:,2,1,3) = zeros(size(squeeze(A(:,:,1,1))));
     du_dx(:,:,2,2,3) = zeros(size(squeeze(A(:,:,1,1))));
     du_dx(:,:,2,3,3) = 0.5*(squeeze(A(:,:,2,3)) + flipud(squeeze(A(:,:,2,3))));
+    
     du_dx(:,:,3,1,3) = 0.5*(squeeze(A(:,:,3,1)) - flipud(squeeze(A(:,:,3,1))));
     du_dx(:,:,3,2,3) = 0.5*(squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
     du_dx(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
-
-elseif isfield(Maps,'A11') 
+    
+elseif isfield(Maps,'A11')
+    %% strain decompsotion 
     % Mode I
-    du_dx(:,:,1,1,1) = 0.25*2*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))));
-    du_dx(:,:,1,2,1) = 0.25*(squeeze(A(:,:,1,2)) + flipud(squeeze(A(:,:,1,2))) ...
-        + squeeze(A(:,:,2,1)) - flipud(squeeze(A(:,:,2,1))));
-    du_dx(:,:,1,3,1) = 0.25*(squeeze(A(:,:,1,3)) + flipud(squeeze(A(:,:,1,3))) ...
-        + squeeze(A(:,:,3,1)) + flipud(squeeze(A(:,:,3,1))));
-    du_dx(:,:,2,1,1) = du_dx(:,:,1,2,1);
-    du_dx(:,:,2,2,1) = 0.25*2*(squeeze(A(:,:,2,2)) - flipud(squeeze(A(:,:,2,2))));
-    du_dx(:,:,2,3,1) = 0.25*(squeeze(A(:,:,2,3)) - flipud(squeeze(A(:,:,2,3))) ...
-        + squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
-    du_dx(:,:,3,1,1) = du_dx(:,:,1,3,1);
-    du_dx(:,:,3,2,1) = du_dx(:,:,2,3,1);
-    du_dx(:,:,3,3,1) = 0.25*2*(squeeze(A(:,:,3,3)) + flipud(squeeze(A(:,:,3,3))));
+    De_E(:,:,1,1,1) = 0.25*((squeeze(A(:,:,1,1))  +        squeeze(A(:,:,1,1))'  -2) + ...
+                      (flipud(squeeze(A(:,:,1,1))) + flipud(squeeze(A(:,:,1,1))') -2));
+    De_E(:,:,1,2,1) = 0.25*((squeeze(A(:,:,1,2))  +        squeeze(A(:,:,1,2))' ) - ...
+                      (flipud(squeeze(A(:,:,1,2))) + flipud(squeeze(A(:,:,1,2))')));
+    De_E(:,:,1,3,1) = 0.25*((squeeze(A(:,:,1,3))         + squeeze(A(:,:,1,3))' ) + ...
+                       flipud(squeeze(A(:,:,1,3))) + flipud(squeeze(A(:,:,1,3))'));
+                   
+    De_E(:,:,2,1,1) = 0.25*((squeeze(A(:,:,2,1))         + squeeze(A(:,:,2,1))' ) - ...
+                       flipud(squeeze(A(:,:,2,1))) + flipud(squeeze(A(:,:,2,1))'));
+    De_E(:,:,2,2,1) = 0.25*((squeeze(A(:,:,2,2))  +        squeeze(A(:,:,2,2))'  -2) + ...
+                      (flipud(squeeze(A(:,:,2,2))) + flipud(squeeze(A(:,:,2,2))') -2));
+    De_E(:,:,2,3,1) = 0.25*((squeeze(A(:,:,2,3))         + squeeze(A(:,:,2,3))' ) - ...
+                       flipud(squeeze(A(:,:,2,3))) + flipud(squeeze(A(:,:,2,3))'));
+              
+    De_E(:,:,3,1,1) = 0.25*((squeeze(A(:,:,3,1))         + squeeze(A(:,:,3,1))' ) + ...
+                       flipud(squeeze(A(:,:,3,1))) + flipud(squeeze(A(:,:,3,1))'));
+    De_E(:,:,3,2,1) = 0.25*((squeeze(A(:,:,3,2))         + squeeze(A(:,:,3,2))' ) - ...
+                       flipud(squeeze(A(:,:,3,2))) + flipud(squeeze(A(:,:,3,2))'));
+    De_E(:,:,3,3,1) = 0.25*((squeeze(A(:,:,3,3))  +        squeeze(A(:,:,3,3))'  -2) + ...
+                      (flipud(squeeze(A(:,:,3,3))) + flipud(squeeze(A(:,:,3,3))') -2));
     
     % Mode II
-    du_dx(:,:,1,1,2) = 0.25*2*(squeeze(A(:,:,1,1)) - flipud(squeeze(A(:,:,1,1))));
-    du_dx(:,:,1,2,2) = 0.25*(squeeze(A(:,:,1,2)) - flipud(squeeze(A(:,:,1,2))) ...
-        + squeeze(A(:,:,2,1)) + flipud(squeeze(A(:,:,2,1))));
+    De_E(:,:,1,1,2) = 0.25*((squeeze(A(:,:,1,1))  +        squeeze(A(:,:,1,1))'  -2) - ...
+                      (flipud(squeeze(A(:,:,1,1))) + flipud(squeeze(A(:,:,1,1))') -2));
+    De_E(:,:,1,2,2) = 0.25*((squeeze(A(:,:,1,2))         + squeeze(A(:,:,1,2))' ) + ...
+                       flipud(squeeze(A(:,:,1,2))) + flipud(squeeze(A(:,:,1,2))'));
+    De_E(:,:,1,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+                   
+    De_E(:,:,2,1,2) = 0.25*((squeeze(A(:,:,2,1))         + squeeze(A(:,:,2,1))' ) + ...
+                       flipud(squeeze(A(:,:,2,1))) + flipud(squeeze(A(:,:,2,1))'));
+    De_E(:,:,2,2,2) = 0.25*((squeeze(A(:,:,2,2))  +        squeeze(A(:,:,2,2))'  -2) - ...
+                      (flipud(squeeze(A(:,:,2,2))) + flipud(squeeze(A(:,:,2,2))') -2));
+    De_E(:,:,2,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+              
+    De_E(:,:,3,1,2) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,3,2,2) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,3,3,2) = 0.25*((squeeze(A(:,:,3,3))  +        squeeze(A(:,:,3,3))'  -2) - ...
+                      (flipud(squeeze(A(:,:,3,3))) + flipud(squeeze(A(:,:,3,3))') -2));
+    
+    % Mode III
+    De_E(:,:,1,1,3) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,1,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,1,3,3) = 0.25*((squeeze(A(:,:,1,3))         + squeeze(A(:,:,1,3))' ) - ...
+                       flipud(squeeze(A(:,:,1,3))) + flipud(squeeze(A(:,:,1,3))'));
+                   
+    De_E(:,:,2,1,3) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,2,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,2,3,3) = 0.25*((squeeze(A(:,:,2,3))         + squeeze(A(:,:,2,3))' ) + ...
+                       flipud(squeeze(A(:,:,2,3))) + flipud(squeeze(A(:,:,2,3))'));
+              
+    De_E(:,:,3,1,3) = 0.25*((squeeze(A(:,:,3,1))         + squeeze(A(:,:,3,1))' ) - ...
+                       flipud(squeeze(A(:,:,3,1))) + flipud(squeeze(A(:,:,3,1))'));
+    De_E(:,:,3,2,3) = 0.25*((squeeze(A(:,:,3,2))         + squeeze(A(:,:,3,2))' ) + ...
+                       flipud(squeeze(A(:,:,3,2))) + flipud(squeeze(A(:,:,3,2))'));
+    De_E(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
+
+    %% Defromation deperivative decompostion 
+    % Mode I
+    du_dx(:,:,1,1,1) = 0.5*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))))-1;
+    du_dx(:,:,1,2,1) = 0.5*(squeeze(A(:,:,1,2)) + flipud(squeeze(A(:,:,1,2))));
+    du_dx(:,:,1,3,1) = 0.5*(squeeze(A(:,:,1,3)) + flipud(squeeze(A(:,:,1,3))));
+    
+    du_dx(:,:,2,1,1) = 0.5*(squeeze(A(:,:,2,1)) - flipud(squeeze(A(:,:,2,1))));
+    du_dx(:,:,2,2,1) = 0.5*(squeeze(A(:,:,2,2)) - flipud(squeeze(A(:,:,2,2))));
+    du_dx(:,:,2,3,1) = 0.5*(squeeze(A(:,:,2,3)) - flipud(squeeze(A(:,:,2,3))));
+    
+    du_dx(:,:,3,1,1) = 0.5*(squeeze(A(:,:,3,1)) + flipud(squeeze(A(:,:,3,1))));
+    du_dx(:,:,3,2,1) = 0.5*(squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
+    du_dx(:,:,3,3,1) = 0.5*(squeeze(A(:,:,3,3)) + flipud(squeeze(A(:,:,3,3))))-1;
+    
+    % Mode II
+    du_dx(:,:,1,1,2) = 0.5*(squeeze(A(:,:,1,1)) - flipud(squeeze(A(:,:,1,1))));
+    du_dx(:,:,1,2,2) = 0.5*(squeeze(A(:,:,1,2)) - flipud(squeeze(A(:,:,1,2))));
     du_dx(:,:,1,3,2) = zeros(size(squeeze(A(:,:,1,1))));
-    du_dx(:,:,2,1,2) = du_dx(:,:,1,2,2);
-    du_dx(:,:,2,2,2) = 0.25*2*(squeeze(A(:,:,2,2)) + flipud(squeeze(A(:,:,2,2))));
+    
+    du_dx(:,:,2,1,2) = 0.5*(squeeze(A(:,:,2,1)) + flipud(squeeze(A(:,:,2,1))));
+    du_dx(:,:,2,2,2) = 0.5*(squeeze(A(:,:,2,2)) + flipud(squeeze(A(:,:,2,2))))-1;
     du_dx(:,:,2,3,2) = zeros(size(squeeze(A(:,:,1,1))));
-    du_dx(:,:,3,1,2) = du_dx(:,:,1,3,2);
-    du_dx(:,:,3,2,2) = du_dx(:,:,2,3,2);
-    du_dx(:,:,3,3,2) = 0.25*2*(squeeze(A(:,:,3,3)) - flipud(squeeze(A(:,:,3,3))));
+    
+    du_dx(:,:,3,1,2) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,3,2,2) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,3,3,2) = 0.5*(squeeze(A(:,:,3,3)) - flipud(squeeze(A(:,:,3,3))));
     
     % Mode III
     du_dx(:,:,1,1,3) = zeros(size(squeeze(A(:,:,1,1))));
     du_dx(:,:,1,2,3) = zeros(size(squeeze(A(:,:,1,1))));
-    du_dx(:,:,1,3,3) = 0.25*(squeeze(A(:,:,1,3)) - flipud(squeeze(A(:,:,1,3))) ...
-        + squeeze(A(:,:,3,1)) - flipud(squeeze(A(:,:,3,1))));
-    du_dx(:,:,2,1,3) = du_dx(:,:,1,2,3);
+    du_dx(:,:,1,3,3) = 0.5*(squeeze(A(:,:,1,3)) - flipud(squeeze(A(:,:,1,3))));
+    
+    du_dx(:,:,2,1,3) = zeros(size(squeeze(A(:,:,1,1))));
     du_dx(:,:,2,2,3) = zeros(size(squeeze(A(:,:,1,1))));
-    du_dx(:,:,2,3,3) = 0.25*(squeeze(A(:,:,2,3)) + flipud(squeeze(A(:,:,2,3))) ...
-        + squeeze(A(:,:,3,2)) - flipud(squeeze(A(:,:,3,2))));
-    du_dx(:,:,3,1,3) = du_dx(:,:,1,3,3);
-    du_dx(:,:,3,2,3) = du_dx(:,:,2,3,3);
-    du_dx(:,:,3,3,1) = zeros(size(squeeze(A(:,:,1,1))));
+    du_dx(:,:,2,3,3) = 0.5*(squeeze(A(:,:,2,3)) + flipud(squeeze(A(:,:,2,3))));
+    
+    du_dx(:,:,3,1,3) = 0.5*(squeeze(A(:,:,3,1)) - flipud(squeeze(A(:,:,3,1))));
+    du_dx(:,:,3,2,3) = 0.5*(squeeze(A(:,:,3,2)) - flipud(squeeze(A(:,:,3,2))));
+    du_dx(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
+ %}   
 end
 
 %%
-tmp = permute(du_dx,[1,2,5,3,4]);
 if isfield(Maps,'A11')
+    tmp = permute(De_E,[1,2,5,3,4]);
     for iV=1:3
-        for yi=1:size(du_dx,1)
-            for xi=1:size(du_dx,2)
-                A0=permute(tmp(yi,xi,iV,:,:),[4 5 1 2 3]);
-%                 [a,~,c]=svd(A0);             R=a*c';
-                strain=0.5*(A0.'*A0-eye(3));
+        for yi=1:size(De_E,1)
+            for xi=1:size(De_E,2)
+                strain=permute(tmp(yi,xi,iV,:,:),[4 5 1 2 3]);
                 e_voight=[strain(1,1);strain(2,2);strain(3,3);2*strain(2,1);2*strain(3,1);2*strain(3,2)];
                 % this is in contention
                 %{
+                A0 = strain=permute(tmp(yi,xi,iV,:,:),[4 5 1 2 3]);
+                [a,~,c]=svd(A0);             R=a*c';
+                strain=0.5*(A0.'*A0-eye(3));
                 %solve the boundary condition
                 K1=e_voight(1)-e_voight(3);
                 K2=e_voight(2)-e_voight(3);
@@ -349,8 +434,8 @@ if isfield(Maps,'A11')
                       (Maps.Stiffness(1,3)+Maps.Stiffness(2,3)+Maps.Stiffness(3,3));
                 e11n=K1+e33n;
                 e22n=K2+e33n;
-                %}
                 e_voight = [e11n;e22n;e33n;e_voight(4:6)];%new strain vector
+                %}
                 s_voight = Maps.Stiffness*e_voight;%stress
                 
                 %convert to the tensors
@@ -559,12 +644,17 @@ hold off
 
 for iV=1:3
     for iO=1:3
+        eval(sprintf('Crop.S%d%d = Maps.S%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
+            iV,iO,iV,iO));
         eval(sprintf('Crop.E%d%d = Maps.E%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
+            iV,iO,iV,iO));
+        eval(sprintf('Crop.A%d%d = Maps.A%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
             iV,iO,iV,iO));
     end
 end
 
 %% XY, steps and stifness
+Maps.Z = zeros(size(Maps.X));
 Crop.X   = Maps.X(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));
 Crop.Y   = Maps.Y(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));
 Crop.Z   = Maps.Z(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));
@@ -630,7 +720,7 @@ caxis(cbax,[min(cU(:)) max(cU(:))]);
 h = colorbar(cbax, 'location', 'westoutside','position', [0.9011 0.1211 0.0121 0.7533] );
 h.Label.String = [char(949)];
 h.Label.FontSize = 30;
-set([s1 s2 s3 s5 s6 s7 s8 s9],"clim",caxis);
+set([s1 s2 s3 s4 s5 s6 s7 s8 s9],"clim",caxis);
 %}
 set(gcf,'position',[348 59 1396 932]);
 end
@@ -692,7 +782,75 @@ caxis(cbax,[min(cU(:)) max(cU(:))]);
 h = colorbar(cbax, 'location', 'westoutside','position', [0.9011 0.1211 0.0121 0.7533] );
 h.Label.String = '\sigma [GPa]';
 h.Label.FontSize = 30;
-set([s1 s2 s3 s5 s6 s7 s8 s9],"clim",caxis);
+set([s1 s2 s3 s4 s5 s6 s7 s8 s9],"clim",caxis);
+%}
+set(gcf,'position',[348 59 1396 932]);
+end
+
+%%
+function plot_DecomposedA(uXXd,uYYd,uZZd,uXYd,uXZd,uYZd,Maps)
+figure;
+s1=subplot(3,3,1);  	contourf(Maps.X,Maps.Y,Maps.A11,'LineStyle','none');
+title('A_{xx}','fontsize',19);
+axis image; axis off; colormap jet; box off;
+c  =colorbar;	cU(1,:) = c.Limits;     colorbar off;
+s2=subplot(3,3,2);  	contourf(Maps.X,Maps.Y,Maps.A12,'LineStyle','none');
+title('A_{xy}','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(2,:) = c.Limits;     colorbar off;
+s3=subplot(3,3,3);  	contourf(Maps.X,Maps.Y,Maps.A13,'LineStyle','none');
+title('A_{xz}','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(3,:) = c.Limits;     colorbar off;
+s5=subplot(3,3,5);  	contourf(Maps.X,Maps.Y,Maps.A22,'LineStyle','none');
+title('A_{yy}','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(4,:) = c.Limits;     colorbar off;
+s6=subplot(3,3,6);  	contourf(Maps.X,Maps.Y,Maps.A23,'LineStyle','none');
+title('A_{yz}','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(5,:) = c.Limits;    colorbar off;
+s9=subplot(3,3,9);  	contourf(Maps.X,Maps.Y,Maps.A33,'LineStyle','none');
+title('A_{zz}','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(6,:) = c.Limits;     colorbar off;
+addScale([3 3 9],[Maps.X(:) Maps.Y(:)]);
+
+AId   = sqrt(0.5*((uXXd(:,:,1)-uYYd(:,:,1)).^2+(uYYd(:,:,1)-uZZd(:,:,1)).^2+...
+    (uZZd(:,:,1)-uXXd(:,:,1)).^2+ ...
+    (uXYd(:,:,1).^2+uYZd(:,:,1).^2+uXZd(:,:,1).^2).*6));
+AIId  = sqrt(0.5*((uXXd(:,:,2)-uYYd(:,:,2)).^2+(uYYd(:,:,2)-uZZd(:,:,2)).^2+...
+    (uZZd(:,:,2)-uXXd(:,:,2)).^2+ ...
+    (uXYd(:,:,2).^2+uYZd(:,:,2).^2+uXZd(:,:,2).^2).*6));
+AIIId = sqrt(0.5*((uXXd(:,:,3)-uYYd(:,:,3)).^2+(uYYd(:,:,3)-uZZd(:,:,3)).^2+...
+    (uZZd(:,:,3)-uXXd(:,:,3)).^2+ ...
+    (uXYd(:,:,3).^2+uYZd(:,:,3).^2+uXZd(:,:,3).^2).*6));
+
+s4=subplot(3,3,4);  	contourf(Maps.X,Maps.Y,AId*1e-9,'LineStyle','none');
+title('A^{I}_M','fontsize',19);
+axis image; axis off;  box off; colormap jet;
+c  =colorbar;	co(7,:) = c.Limits;     colorbar off;
+s7=subplot(3,3,7);  	contourf(Maps.X,Maps.Y,AIId*1e-9,'LineStyle','none');
+title('A^{II}_M','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	co(8,:) = c.Limits;     colorbar off;
+s8=subplot(3,3,8);  	contourf(Maps.X,Maps.Y,AIIId*1e-9,'LineStyle','none');
+title('A^{III}_M','fontsize',19);
+axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	co(9,:) = c.Limits;    colorbar off;
+%
+cbax  = axes('visible', 'off');         cU(abs(cU)==1)=0;
+caxis(cbax,[1+min(cU(:)) 1-min(cU(:))]);
+h = colorbar(cbax, 'location', 'westoutside','position', [0.9011 0.1211 0.0121 0.7533] );
+h.Label.String = 'A_0';
+h.Label.FontSize = 30;
+set([s1 s2 s3  s5 s6   s9],"clim",caxis);
+cbax  = axes('visible', 'off');         co(abs(co)==1)=0;
+caxis(cbax,[min(co(:)) max(co(:))]);
+h = colorbar(cbax, 'location', 'westoutside','position', [0.1267 0.1061 0.0129 0.4873] );
+h.Label.String = 'A_0';
+h.Label.FontSize = 30;
+set([s4 s7 s8],"clim",caxis);
 %}
 set(gcf,'position',[348 59 1396 932]);
 end
