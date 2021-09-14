@@ -113,7 +113,7 @@ if strcmpi(answer,'R') % crop data
         Maps.A31 = flip(flip(Maps.A31,1),2);    Maps.A32 = flip(flip(Maps.A32,1),2);
         Maps.A33 = flip(flip(Maps.A33,1),2);
     end
-% end
+end
 close
 %}
 %%
