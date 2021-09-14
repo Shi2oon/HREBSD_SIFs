@@ -47,10 +47,10 @@ Maps.Stiffness = [1/Maps.E          -Maps.nu/Maps.E     -Maps.nu/Maps.E 0 0 0
                   0 0 0 0       2*(1+Maps.nu)/Maps.E                        0
                   0 0 0 0 0         2*(1+Maps.nu)/Maps.E];
 Maps.Stiffness = Maps.Stiffness^-1;
-%}
+
 Maps.SavingD = [pwd];
 Maps.results = [pwd];
-
+%}
 %% Anayltical displacement data.
 Maps.stepsize = 1/sz*2;
 lin = Maps.stepsize*(ceil(-1/Maps.stepsize)+1/2):Maps.stepsize:Maps.stepsize*(floor(1/Maps.stepsize)-1/2);
