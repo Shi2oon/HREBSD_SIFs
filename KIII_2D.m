@@ -1,4 +1,4 @@
-function [J,KI,KII,KIII] = KIII_2D(Maps,MatProp,xEBSD)
+function [J,KI,KII,KIII] = KIII_2D(Maps,MatProp)
 close all;
 
 % This code decompose the Stress intesity factors from strain maps
@@ -26,6 +26,7 @@ close all;
 % cooridnate can be a zero column. the 4th to the 9th column are the strain
 % components arranged as
 % Maps = [X(:) Y(:) Z(:) E11(:) E12(:) E13(:) E21(:) E22(:) E23(:) E31(:) E32(:) E33(:)];
+% or A for deformation gradient tensor
 
 % if the map is a 2D strain map then zero all out of the plane components
 
@@ -97,7 +98,7 @@ if strcmpi(answer,'R') % crop data
     Maps.E23 = flip(flip(Maps.E23,1),2);
     Maps.E31 = flip(flip(Maps.E31,1),2);    Maps.E32 = flip(flip(Maps.E32,1),2);
     Maps.E33 = flip(flip(Maps.E33,1),2);
-    if exist('xEBSD','var')
+    if isfield(Maps,'A11')
         Maps.S11 = flip(flip(Maps.S11,1),2);    Maps.S12 = flip(flip(Maps.S12,1),2);
         Maps.S13 = flip(flip(Maps.S13,1),2);
         Maps.S21 = flip(flip(Maps.S21,1),2);    Maps.S22 = flip(flip(Maps.S22,1),2);
@@ -112,12 +113,12 @@ if strcmpi(answer,'R') % crop data
         Maps.A31 = flip(flip(Maps.A31,1),2);    Maps.A32 = flip(flip(Maps.A32,1),2);
         Maps.A33 = flip(flip(Maps.A33,1),2);
     end
-end
+% end
 close
 %}
 %%
 %  comment this out if you want to use the displacement derviatives
-if isfield(Maps,'A11'); Maps = rmfield(Maps,'A11'); end
+% if isfield(Maps,'A11'); Maps = rmfield(Maps,'A11'); end
 switch Maps.units.St
     case 'Pa'
         Saf = 1;
@@ -162,12 +163,18 @@ Wd = 0.5*(E(:,:,1,1,:).*S(:,:,1,1,:) + E(:,:,1,2,:).*S(:,:,1,2,:) + E(:,:,1,3,:)
         + E(:,:,3,1,:).*S(:,:,3,1,:) + E(:,:,3,2,:).*S(:,:,3,2,:) + E(:,:,3,3,:).*S(:,:,3,3,:));
 %
 % Decomposed Plots
-if exist('xEBSD','var')
+if isfield(Maps,'A11')
     plot_DecomposedA(du_dx(:,:,1,1,:),du_dx(:,:,2,2,:),du_dx(:,:,3,3,:),du_dx(:,:,1,2,:),...
                      du_dx(:,:,1,3,:),du_dx(:,:,2,3,:),Maps);
     if isfield(Maps,'SavingD')
         saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_A.fig']);
         saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_A.tif']);  close
+    end
+    plot_DecomposedStess(S(:,:,1,1,:),S(:,:,2,2,:),S(:,:,3,3,:),S(:,:,1,2,:),...
+        S(:,:,1,3,:),S(:,:,2,3,:),Maps,Saf);
+    if isfield(Maps,'SavingD')
+        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Stress.fig']);
+        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Stress.tif']);  close
     end
 else
     plot_DecomposedStrain(E(:,:,1,1,:),E(:,:,2,2,:),E(:,:,3,3,:),E(:,:,1,2,:),...
@@ -176,13 +183,6 @@ else
         saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Strain.fig']);
         saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Strain.tif']);  close
     end
-end
-
-plot_DecomposedStess(S(:,:,1,1,:),S(:,:,2,2,:),S(:,:,3,3,:),S(:,:,1,2,:),...
-                     S(:,:,1,3,:),S(:,:,2,3,:),Maps,Saf);
-if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Stress.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Stress.tif']);  close
 end
 %}
 %%
@@ -220,11 +220,12 @@ J.KRaw(1:2,:) = sqrt(J.Raw(1:2,:)*Maps.E);
 J.KRaw(3,:) = sqrt(J.Raw(3,:)*2*Maps.G);      % Mode III
 J.JRaw = J.Raw;
 J.Raw = sum(J.Raw); 
-
+%
 %%
 figure; plot(J.Raw); legend('J')%trim acess
 set(gcf,'position',[98 311 1481 667])
 text(1:length(J.Raw),J.Raw,string([1:length(J.Raw)]))
+%}
 oh = input('where to cut the contour? '); close
 
 %%
@@ -311,7 +312,9 @@ if ~isfield(Maps,'A11') % strain decompostion
     du_dx(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
     
 elseif isfield(Maps,'A11')
-    %% strain decompsotion 
+    %{
+    %% strain decompsotion (Eulerian-Almansi finite strain tensor split
+    % Zhu et al. 2020 (doi: 10.1016/J.ULTRAMIC.2019.112851), eq. 15 )
     % Mode I
     De_E(:,:,1,1,1) = 0.25*((squeeze(A(:,:,1,1))  +        squeeze(A(:,:,1,1))'  -2) + ...
                       (flipud(squeeze(A(:,:,1,1))) + flipud(squeeze(A(:,:,1,1))') -2));
@@ -368,6 +371,64 @@ elseif isfield(Maps,'A11')
     De_E(:,:,3,2,3) = 0.25*((squeeze(A(:,:,3,2))         + squeeze(A(:,:,3,2))' ) + ...
                        flipud(squeeze(A(:,:,3,2))) + flipud(squeeze(A(:,:,3,2))'));
     De_E(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
+    %}
+    %% strain decompsotion (Green-Lagrangian strain tensor split )
+    % Mode I
+    De_E(:,:,1,1,1) = 0.25*(transpose(squeeze(A(:,:,1,1)))*squeeze(A(:,:,1,1)) + ...
+                            transpose(flipud(squeeze(A(:,:,1,1))))*flipud(squeeze(A(:,:,1,1))) -2);
+    De_E(:,:,1,2,1) = 0.25*(transpose(squeeze(A(:,:,1,2)))*squeeze(A(:,:,1,2)) - ...
+                            transpose(flipud(squeeze(A(:,:,1,2))))*flipud(squeeze(A(:,:,1,2))));
+    De_E(:,:,1,3,1) = 0.25*(transpose(squeeze(A(:,:,1,3)))*squeeze(A(:,:,1,3)) + ...
+                            transpose(flipud(squeeze(A(:,:,1,3))))*flipud(squeeze(A(:,:,1,3))));
+                   
+    De_E(:,:,2,1,1) = 0.25*(transpose(squeeze(A(:,:,2,1)))*squeeze(A(:,:,2,1)) - ...
+                            transpose(flipud(squeeze(A(:,:,2,1))))*flipud(squeeze(A(:,:,2,1))));
+    De_E(:,:,2,2,1) = 0.25*(transpose(squeeze(A(:,:,2,2)))*squeeze(A(:,:,2,2)) + ...
+                            transpose(flipud(squeeze(A(:,:,2,2))))*flipud(squeeze(A(:,:,2,2))) -2);
+    De_E(:,:,2,3,1) = 0.25*(transpose(squeeze(A(:,:,2,3)))*squeeze(A(:,:,2,3)) - ...
+                            transpose(flipud(squeeze(A(:,:,2,3))))*flipud(squeeze(A(:,:,2,3))));
+              
+    De_E(:,:,3,1,1) = 0.25*(transpose(squeeze(A(:,:,3,1)))*squeeze(A(:,:,3,1)) + ...
+                            transpose(flipud(squeeze(A(:,:,3,1))))*flipud(squeeze(A(:,:,3,1))));
+    De_E(:,:,3,2,1) = 0.25*(transpose(squeeze(A(:,:,3,2)))*squeeze(A(:,:,3,2)) - ...
+                            transpose(flipud(squeeze(A(:,:,3,2))))*flipud(squeeze(A(:,:,3,2))));
+    De_E(:,:,3,3,1) = 0.25*(transpose(squeeze(A(:,:,3,3)))*squeeze(A(:,:,3,3)) + ...
+                            transpose(flipud(squeeze(A(:,:,3,3))))*flipud(squeeze(A(:,:,3,3))) -2);
+    
+    % Mode II
+    De_E(:,:,1,1,1) = 0.25*(transpose(squeeze(A(:,:,1,1)))*squeeze(A(:,:,1,1)) - ...
+                            transpose(flipud(squeeze(A(:,:,1,1))))*flipud(squeeze(A(:,:,1,1))));
+    De_E(:,:,1,2,1) = 0.25*(transpose(squeeze(A(:,:,1,2)))*squeeze(A(:,:,1,2)) + ...
+                            transpose(flipud(squeeze(A(:,:,1,2))))*flipud(squeeze(A(:,:,1,2))));
+    De_E(:,:,1,3,1) = zeros(size(squeeze(A(:,:,1,1))));
+                   
+    De_E(:,:,2,1,1) = 0.25*(transpose(squeeze(A(:,:,2,1)))*squeeze(A(:,:,2,1)) + ...
+                            transpose(flipud(squeeze(A(:,:,2,1))))*flipud(squeeze(A(:,:,2,1))));
+    De_E(:,:,2,2,1) = 0.25*(transpose(squeeze(A(:,:,2,2)))*squeeze(A(:,:,2,2)) - ...
+                            transpose(flipud(squeeze(A(:,:,2,2))))*flipud(squeeze(A(:,:,2,2))));
+    De_E(:,:,2,3,1) = zeros(size(squeeze(A(:,:,1,1))));
+              
+    De_E(:,:,3,1,1) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,3,2,1) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,3,3,1) = 0.25*(transpose(squeeze(A(:,:,3,3)))*squeeze(A(:,:,3,3)) - ...
+                            transpose(flipud(squeeze(A(:,:,3,3))))*flipud(squeeze(A(:,:,3,3))));
+    
+    % Mode III
+    De_E(:,:,1,1,1) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,1,2,1) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,1,3,1) = 0.25*(transpose(squeeze(A(:,:,1,3)))*squeeze(A(:,:,1,3)) - ...
+                            transpose(flipud(squeeze(A(:,:,1,3))))*flipud(squeeze(A(:,:,1,3))));
+                   
+    De_E(:,:,2,1,1) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,2,2,1) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,2,3,1) = 0.25*(transpose(squeeze(A(:,:,2,3)))*squeeze(A(:,:,2,3)) + ...
+                            transpose(flipud(squeeze(A(:,:,2,3))))*flipud(squeeze(A(:,:,2,3))));
+              
+    De_E(:,:,3,1,1) = 0.25*(transpose(squeeze(A(:,:,3,1)))*squeeze(A(:,:,3,1)) - ...
+                            transpose(flipud(squeeze(A(:,:,3,1))))*flipud(squeeze(A(:,:,3,1))));
+    De_E(:,:,3,2,1) = 0.25*(transpose(squeeze(A(:,:,3,2)))*squeeze(A(:,:,3,2)) + ...
+                            transpose(flipud(squeeze(A(:,:,3,2))))*flipud(squeeze(A(:,:,3,2))));
+    De_E(:,:,3,3,1) = zeros(size(squeeze(A(:,:,1,1))));
 
     %% Defromation deperivative decompostion 
     % Mode I
@@ -599,7 +660,7 @@ Co.C = Co.C^-1;
 % delivers minus results!
 if G<0 || E<0 || v<0 || v > 0.5
     v = 1+(Co.vxz+Co.vyz)/2;
-    if v > 0.5 % for metals
+    if v > 0.5 || v<0 % for metals
         v = abs((3*BV-E)/(6*BV));
     end
 end
