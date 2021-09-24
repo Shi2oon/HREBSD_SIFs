@@ -118,7 +118,7 @@ close
 %}
 %%
 %  comment this out if you want to use the displacement derviatives
-% if isfield(Maps,'A11'); Maps = rmfield(Maps,'A11'); end
+if isfield(Maps,'A11'); Maps = rmfield(Maps,'A11'); end
 switch Maps.units.St
     case 'Pa'
         Saf = 1;
@@ -396,39 +396,39 @@ elseif isfield(Maps,'A11')
                             transpose(flipud(squeeze(A(:,:,3,3))))*flipud(squeeze(A(:,:,3,3))) -2);
     
     % Mode II
-    De_E(:,:,1,1,1) = 0.25*(transpose(squeeze(A(:,:,1,1)))*squeeze(A(:,:,1,1)) - ...
+    De_E(:,:,1,1,2) = 0.25*(transpose(squeeze(A(:,:,1,1)))*squeeze(A(:,:,1,1)) - ...
                             transpose(flipud(squeeze(A(:,:,1,1))))*flipud(squeeze(A(:,:,1,1))));
-    De_E(:,:,1,2,1) = 0.25*(transpose(squeeze(A(:,:,1,2)))*squeeze(A(:,:,1,2)) + ...
+    De_E(:,:,1,2,2) = 0.25*(transpose(squeeze(A(:,:,1,2)))*squeeze(A(:,:,1,2)) + ...
                             transpose(flipud(squeeze(A(:,:,1,2))))*flipud(squeeze(A(:,:,1,2))));
-    De_E(:,:,1,3,1) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,1,3,2) = zeros(size(squeeze(A(:,:,1,1))));
                    
-    De_E(:,:,2,1,1) = 0.25*(transpose(squeeze(A(:,:,2,1)))*squeeze(A(:,:,2,1)) + ...
+    De_E(:,:,2,1,2) = 0.25*(transpose(squeeze(A(:,:,2,1)))*squeeze(A(:,:,2,1)) + ...
                             transpose(flipud(squeeze(A(:,:,2,1))))*flipud(squeeze(A(:,:,2,1))));
-    De_E(:,:,2,2,1) = 0.25*(transpose(squeeze(A(:,:,2,2)))*squeeze(A(:,:,2,2)) - ...
+    De_E(:,:,2,2,2) = 0.25*(transpose(squeeze(A(:,:,2,2)))*squeeze(A(:,:,2,2)) - ...
                             transpose(flipud(squeeze(A(:,:,2,2))))*flipud(squeeze(A(:,:,2,2))));
-    De_E(:,:,2,3,1) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,2,3,2) = zeros(size(squeeze(A(:,:,1,1))));
               
-    De_E(:,:,3,1,1) = zeros(size(squeeze(A(:,:,1,1))));
-    De_E(:,:,3,2,1) = zeros(size(squeeze(A(:,:,1,1))));
-    De_E(:,:,3,3,1) = 0.25*(transpose(squeeze(A(:,:,3,3)))*squeeze(A(:,:,3,3)) - ...
+    De_E(:,:,3,1,2) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,3,2,2) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,3,3,2) = 0.25*(transpose(squeeze(A(:,:,3,3)))*squeeze(A(:,:,3,3)) - ...
                             transpose(flipud(squeeze(A(:,:,3,3))))*flipud(squeeze(A(:,:,3,3))));
     
     % Mode III
-    De_E(:,:,1,1,1) = zeros(size(squeeze(A(:,:,1,1))));
-    De_E(:,:,1,2,1) = zeros(size(squeeze(A(:,:,1,1))));
-    De_E(:,:,1,3,1) = 0.25*(transpose(squeeze(A(:,:,1,3)))*squeeze(A(:,:,1,3)) - ...
+    De_E(:,:,1,1,3) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,1,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,1,3,3) = 0.25*(transpose(squeeze(A(:,:,1,3)))*squeeze(A(:,:,1,3)) - ...
                             transpose(flipud(squeeze(A(:,:,1,3))))*flipud(squeeze(A(:,:,1,3))));
                    
-    De_E(:,:,2,1,1) = zeros(size(squeeze(A(:,:,1,1))));
-    De_E(:,:,2,2,1) = zeros(size(squeeze(A(:,:,1,1))));
-    De_E(:,:,2,3,1) = 0.25*(transpose(squeeze(A(:,:,2,3)))*squeeze(A(:,:,2,3)) + ...
+    De_E(:,:,2,1,3) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,2,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,2,3,3) = 0.25*(transpose(squeeze(A(:,:,2,3)))*squeeze(A(:,:,2,3)) + ...
                             transpose(flipud(squeeze(A(:,:,2,3))))*flipud(squeeze(A(:,:,2,3))));
               
-    De_E(:,:,3,1,1) = 0.25*(transpose(squeeze(A(:,:,3,1)))*squeeze(A(:,:,3,1)) - ...
+    De_E(:,:,3,1,3) = 0.25*(transpose(squeeze(A(:,:,3,1)))*squeeze(A(:,:,3,1)) - ...
                             transpose(flipud(squeeze(A(:,:,3,1))))*flipud(squeeze(A(:,:,3,1))));
-    De_E(:,:,3,2,1) = 0.25*(transpose(squeeze(A(:,:,3,2)))*squeeze(A(:,:,3,2)) + ...
+    De_E(:,:,3,2,3) = 0.25*(transpose(squeeze(A(:,:,3,2)))*squeeze(A(:,:,3,2)) + ...
                             transpose(flipud(squeeze(A(:,:,3,2))))*flipud(squeeze(A(:,:,3,2))));
-    De_E(:,:,3,3,1) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
 
     %% Defromation deperivative decompostion 
     % Mode I
@@ -479,7 +479,8 @@ if isfield(Maps,'A11')
         for yi=1:size(De_E,1)
             for xi=1:size(De_E,2)
                 strain=permute(tmp(yi,xi,iV,:,:),[4 5 1 2 3]);
-                e_voight=[strain(1,1);strain(2,2);strain(3,3);2*strain(2,1);2*strain(3,1);2*strain(3,2)];
+                e_voight=[strain(1,1);  strain(2,2);    strain(3,3);...
+                          2*strain(2,1);2*strain(3,1);  2*strain(3,2)];
                 % this is in contention
                 %{
                 A0 = strain=permute(tmp(yi,xi,iV,:,:),[4 5 1 2 3]);
