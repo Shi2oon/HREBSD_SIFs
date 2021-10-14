@@ -1,4 +1,4 @@
-function [J,KI,KII,KIII] = KIII_2D(Maps,MatProp)
+function [J,K,KI,KII,KIII] = KIII_2D(Maps,MatProp)
 close all;
 
 % This code decompose the Stress intesity factors from strain maps
@@ -118,7 +118,7 @@ close
 %}
 %%
 %  comment this out if you want to use the displacement derviatives
-if isfield(Maps,'A11'); Maps = rmfield(Maps,'A11'); end
+if isfield(Maps,'A11');     Maps = rmfield(Maps,'A11'); end
 switch Maps.units.St
     case 'Pa'
         Saf = 1;
@@ -245,12 +245,15 @@ KII.true = round(mean(((KII.Raw(contrs:end)))),dic);
 KII.div  = round(std(((KII.Raw(contrs:end))),1),dic);
 KIII.true= round(mean(((KIII.Raw(contrs:end)))),dic);
 KIII.div = round(std(((KIII.Raw(contrs:end))),1),dic);
+K.Raw    = sqrt(J.Raw*Maps.E)*1e-6;
+K.true   = round(mean(((K.Raw(contrs:end)))),dic);
+K.div    = round(std(((K.Raw(contrs:end))),1),dic);
 %
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
     saveas(gcf, [fileparts(Maps.SavingD) '_J_K.fig']);
     saveas(gcf, [fileparts(Maps.SavingD) '_J_K.tif']);  close all
-    save([fileparts(Maps.SavingD) '_KIII_2D.mat'],'Maps','J','KI','KII','KIII','saf');
+    save([fileparts(Maps.SavingD) '_KIII_2D.mat'],'Maps','J','K','KI','KII','KIII','saf');
 end
 %}
 end
