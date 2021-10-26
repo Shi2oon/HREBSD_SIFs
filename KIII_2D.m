@@ -1,4 +1,4 @@
-function [J,K,KI,KII,KIII] = KIII_2D(Maps,MatProp)
+function [J,K,KI,KII,KIII,Maps] = KIII_2D(Maps,MatProp)
 close all;
 
 % This code decompose the Stress intesity factors from strain maps
@@ -663,7 +663,6 @@ Co.C = Co.C^-1;
 %% a different approach as sometime the first approach sometimes
 % delivers minus results!
 if G<0 || E<0 || v<0 || v > 0.5
-    v = 1+(Co.vxz+Co.vyz)/2;
     if v > 0.5 || v<0 % for metals
         v = abs((3*BV-E)/(6*BV));
     end
