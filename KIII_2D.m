@@ -21,14 +21,14 @@ close all;
 % for istroropic material
 % need some unit clbartion specially for mm
 
-% Another option is to input the strain components as a vector matrix with
+% Another option is to input the defromation gradient components as a vector matrix with
 % 9 columns the first three columns are the x, y and z coordinate in meters. z
 % cooridnate can be a zero column. the 4th to the 9th column are the strain
 % components arranged as
 % Maps = [X(:) Y(:) Z(:) E11(:) E12(:) E13(:) E21(:) E22(:) E23(:) E31(:) E32(:) E33(:)];
 % or A for deformation gradient tensor
 
-% if the map is a 2D strain map then zero all out of the plane components
+% if the map is a 2D defromation gradient map then zero all out of the plane components
 
 % the material paramters as MatProp.E for Young's Modulus and MatProp.nu
 % for Possions ratio. or as a stifness matrix all in Pa
@@ -36,7 +36,7 @@ close all;
 % volumetric change.
 
 % Example:
-% [MatProp,~,alldata] = Calibration_2DKIII(3,1,5);
+% [MatProp,~,alldata] = Calibration_2DKIII(3,5,1);
 % [J,KI,KII,KIII] = KIII_2D(alldata,MatProp);% or just MatProp
 % [J,KI,KII,KIII] = KIII_2D(MatProp); % as desigignated maps
 
@@ -46,10 +46,10 @@ if size(Maps,2) > 1
     alldata = Maps; clear Maps
     if size(alldata,2) == 5
         alldata = [alldata(:,1) alldata(:,2) zeros(size(alldata(:,2))) ...
-            alldata(:,3) alldata(:,5) zeros(size(alldata(:,2))) ...
-            alldata(:,5) alldata(:,4) zeros(size(alldata(:,2))) ...
-            zeros(size(alldata(:,2))) zeros(size(alldata(:,2))) ...
-            zeros(size(alldata(:,2)))];
+                   alldata(:,3) alldata(:,5) zeros(size(alldata(:,2))) ...
+                   alldata(:,5) alldata(:,4) zeros(size(alldata(:,2))) ...
+                   zeros(size(alldata(:,2))) zeros(size(alldata(:,2))) ...
+                   zeros(size(alldata(:,2)))];
     end
     [~,Maps]=reshapeStrain(alldata);
     if size(MatProp,1) == 6
@@ -60,11 +60,19 @@ if size(Maps,2) > 1
         Maps.stressstat = MatProp.stressstat;
     	Maps.units.xy = MatProp.units.xy;
         Maps.units.St = MatProp.units.St;
+        if isfield(MatProp,'SavingD')
+            Maps.SavingD = MatProp.SavingD;
+        end
     end
 end
 %
 %% prepare Data
-imagesc(Maps.E11);axis tight; axis image; axis off
+if ~isfield(Maps,'A11')
+    imagesc(Maps.E11);
+elseif isfield(Maps,'A11')
+    imagesc(Maps.A11);    
+end
+    axis tight; axis image; axis off
 set(gcf,'position',[737 287 955 709]);
 %
 opts.Interpreter = 'tex';       % Include the desired Default answer
@@ -74,17 +82,15 @@ answer           = questdlg(quest,'Boundary Condition','Y','N', opts);
 if strcmpi(answer,'Y') % crop data
     [Crop] = CroppingEqually(Maps);
     Maps.X   = Crop.X;      Maps.Y   = Crop.Y;      Maps.Z   = Crop.Z;
+    if ~isfield(Maps,'A11') 
     Maps.E11 = Crop.E11;    Maps.E12 = Crop.E12;    Maps.E13 = Crop.E13;
     Maps.E21 = Crop.E21;    Maps.E22 = Crop.E22;    Maps.E23 = Crop.E23;
     Maps.E31 = Crop.E31;    Maps.E32 = Crop.E32;    Maps.E33 = Crop.E33;
-    
-    Maps.S11 = Crop.S11;    Maps.S12 = Crop.S12;    Maps.S13 = Crop.S13;
-    Maps.S21 = Crop.S21;    Maps.S22 = Crop.S22;    Maps.S23 = Crop.S23;
-    Maps.S31 = Crop.S31;    Maps.S32 = Crop.S32;    Maps.S33 = Crop.S33;
-    
-    Maps.A11 = Crop.A11;    Maps.A12 = Crop.A12;    Maps.A13 = Crop.A13;
-    Maps.A21 = Crop.A21;    Maps.A22 = Crop.A22;    Maps.A23 = Crop.A23;
-    Maps.A31 = Crop.A31;    Maps.A32 = Crop.A32;    Maps.A33 = Crop.A33;
+    elseif isfield(Maps,'A11')   
+        Maps.A11 = Crop.A11;    Maps.A12 = Crop.A12;    Maps.A13 = Crop.A13;
+        Maps.A21 = Crop.A21;    Maps.A22 = Crop.A22;    Maps.A23 = Crop.A23;
+        Maps.A31 = Crop.A31;    Maps.A32 = Crop.A32;    Maps.A33 = Crop.A33;
+    end
 end
 opts.Interpreter = 'tex';       % Include the desired Default answer
 opts.Default     = 'L';         % Use the TeX interpreter to format the question
@@ -99,13 +105,6 @@ if strcmpi(answer,'R') % crop data
     Maps.E31 = flip(flip(Maps.E31,1),2);    Maps.E32 = flip(flip(Maps.E32,1),2);
     Maps.E33 = flip(flip(Maps.E33,1),2);
     if isfield(Maps,'A11')
-        Maps.S11 = flip(flip(Maps.S11,1),2);    Maps.S12 = flip(flip(Maps.S12,1),2);
-        Maps.S13 = flip(flip(Maps.S13,1),2);
-        Maps.S21 = flip(flip(Maps.S21,1),2);    Maps.S22 = flip(flip(Maps.S22,1),2);
-        Maps.S23 = flip(flip(Maps.S23,1),2);
-        Maps.S31 = flip(flip(Maps.S31,1),2);    Maps.S32 = flip(flip(Maps.S32,1),2);
-        Maps.S33 = flip(flip(Maps.S33,1),2);
-        
         Maps.A11 = flip(flip(Maps.A11,1),2);    Maps.A12 = flip(flip(Maps.A12,1),2);
         Maps.A13 = flip(flip(Maps.A13,1),2);
         Maps.A21 = flip(flip(Maps.A21,1),2);    Maps.A22 = flip(flip(Maps.A22,1),2);
@@ -113,12 +112,18 @@ if strcmpi(answer,'R') % crop data
         Maps.A31 = flip(flip(Maps.A31,1),2);    Maps.A32 = flip(flip(Maps.A32,1),2);
         Maps.A33 = flip(flip(Maps.A33,1),2);
     end
+    if isfield(Maps,'S11')
+        Maps.S11 = flip(flip(Maps.S11,1),2);    Maps.S12 = flip(flip(Maps.S12,1),2);
+        Maps.S13 = flip(flip(Maps.S13,1),2);
+        Maps.S21 = flip(flip(Maps.S21,1),2);    Maps.S22 = flip(flip(Maps.S22,1),2);
+        Maps.S23 = flip(flip(Maps.S23,1),2);
+        Maps.S31 = flip(flip(Maps.S31,1),2);    Maps.S32 = flip(flip(Maps.S32,1),2);
+        Maps.S33 = flip(flip(Maps.S33,1),2);
+    end
 end
 close
 %}
 %%
-%  comment this out if you want to use the displacement derviatives
-if isfield(Maps,'A11');     Maps = rmfield(Maps,'A11'); end
 switch Maps.units.St
     case 'Pa'
         Saf = 1;
@@ -153,7 +158,7 @@ switch Maps.units.xy
 end
 try;    Maps.stepsize = Maps.stepsize*saf;
 catch;  Maps.stepsize = unique(round(diff(unique(Maps.Y(:))),4))*saf; end
-Maps.units.St = 'Pa';        Maps.units.xy = 'm';
+Maps.units.St = 'Pa';        Maps.units.xy = 'um';
 DataSize = [size(Maps.E11),1];
 
 %% Decomposition method.
@@ -167,22 +172,25 @@ if isfield(Maps,'A11')
     plot_DecomposedA(du_dx(:,:,1,1,:),du_dx(:,:,2,2,:),du_dx(:,:,3,3,:),du_dx(:,:,1,2,:),...
                      du_dx(:,:,1,3,:),du_dx(:,:,2,3,:),Maps);
     if isfield(Maps,'SavingD')
-        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_A.fig']);
-        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_A.tif']);  close
+        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_du.fig']);
+        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_du.tif']);  close
     end
-    plot_DecomposedStess(S(:,:,1,1,:),S(:,:,2,2,:),S(:,:,3,3,:),S(:,:,1,2,:),...
-        S(:,:,1,3,:),S(:,:,2,3,:),Maps,Saf);
-    if isfield(Maps,'SavingD')
-        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Stress.fig']);
-        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Stress.tif']);  close
-    end
-else
-    plot_DecomposedStrain(E(:,:,1,1,:),E(:,:,2,2,:),E(:,:,3,3,:),E(:,:,1,2,:),...
+end
+if isfield(Maps,'E11')
+    plot_DecomposeddU(E(:,:,1,1,:),E(:,:,2,2,:),E(:,:,3,3,:),E(:,:,1,2,:),...
                           E(:,:,1,3,:),E(:,:,2,3,:),Maps);
     if isfield(Maps,'SavingD')
         saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Strain.fig']);
         saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Strain.tif']);  close
     end
+end
+if isfield(Maps,'S11')
+    plot_DecomposedStess(S(:,:,1,1,:),S(:,:,2,2,:),S(:,:,3,3,:),S(:,:,1,2,:),...
+        S(:,:,1,3,:),S(:,:,2,3,:),Maps,Saf);
+    if isfield(Maps,'SavingD')
+        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Stress.fig']);
+        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Stress.tif']);  close
+    end      
 end
 %}
 %%
@@ -274,7 +282,7 @@ for iV=1:3
 end
 
 %% decompostion
-if ~isfield(Maps,'A11') % strain decompostion
+if ~isfield(Maps,'A11') % defromation gradient decompostion
     % Mode I
     du_dx(:,:,1,1,1) = 0.5*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))));
     du_dx(:,:,1,2,1) = 0.5*(squeeze(A(:,:,1,2)) - flipud(squeeze(A(:,:,1,2))));
@@ -314,7 +322,16 @@ if ~isfield(Maps,'A11') % strain decompostion
     du_dx(:,:,3,2,3) = 0.5*(squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
     du_dx(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
     
-elseif isfield(Maps,'A11')
+    % strain from displacement gradient
+    for i=1:3
+        for j=1:3
+            for M=1:3
+                De_E(:,:,i,j,M) = 0.5*(du_dx(:,:,i,j,M)+du_dx(:,:,j,i,M));
+            end
+        end
+    end
+    
+elseif isfield(Maps,'A11') % decompose the deformaion tensor du = A0-eye(3);
     %{
     %% strain decompsotion (Eulerian-Almansi finite strain tensor split
     % Zhu et al. 2020 (doi: 10.1016/J.ULTRAMIC.2019.112851), eq. 15 )
@@ -375,9 +392,10 @@ elseif isfield(Maps,'A11')
                        flipud(squeeze(A(:,:,3,2))) + flipud(squeeze(A(:,:,3,2))'));
     De_E(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
     %}
+    %{
     %% strain decompsotion (Green-Lagrangian strain tensor split )
     % Mode I
-    De_E(:,:,1,1,1) = 0.25*(transpose(squeeze(A(:,:,1,1)))*squeeze(A(:,:,1,1)) + ...
+    De_E(:,:,1,1,1) = 0.25*(transpose(squeeze(A(:,:,1,1))*squeeze(A(:,:,1,1)) + ...
                             transpose(flipud(squeeze(A(:,:,1,1))))*flipud(squeeze(A(:,:,1,1))) -2);
     De_E(:,:,1,2,1) = 0.25*(transpose(squeeze(A(:,:,1,2)))*squeeze(A(:,:,1,2)) - ...
                             transpose(flipud(squeeze(A(:,:,1,2))))*flipud(squeeze(A(:,:,1,2))));
@@ -432,7 +450,60 @@ elseif isfield(Maps,'A11')
     De_E(:,:,3,2,3) = 0.25*(transpose(squeeze(A(:,:,3,2)))*squeeze(A(:,:,3,2)) + ...
                             transpose(flipud(squeeze(A(:,:,3,2))))*flipud(squeeze(A(:,:,3,2))));
     De_E(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
-
+        end
+    end
+%}
+    %% strain decompostion (split then decompose)
+    for ix = 1:size(Maps.A11,1)
+        for iy = 1:size(Maps.A11,2)
+            A0 = squeeze(A(ix,iy,:,:));
+            strain(ix,iy,:,:) = 0.5*(A0.'*A0-eye(3));
+            for ii = 1:3
+                for ij=1:3
+                    eval(sprintf('Maps.E%d%d(ix,iy) = strain(ix,iy,ii,ij);',ii,ij));
+                end
+            end
+        end
+    end
+    % Mode I
+    De_E(:,:,1,1,1) = 0.25*(squeeze(strain(:,:,1,1))+flipud(squeeze(strain(:,:,1,1))));
+    De_E(:,:,1,2,1) = 0.25*(squeeze(strain(:,:,1,2))-flipud(squeeze(strain(:,:,1,2))));
+    De_E(:,:,1,3,1) = 0.25*(squeeze(strain(:,:,1,3))+flipud(squeeze(strain(:,:,1,3))));
+    
+    De_E(:,:,2,1,1) = 0.25*(squeeze(strain(:,:,2,1))-flipud(squeeze(strain(:,:,2,1))));
+    De_E(:,:,2,2,1) = 0.25*(squeeze(strain(:,:,2,2))+flipud(squeeze(strain(:,:,2,2))));
+    De_E(:,:,2,3,1) = 0.25*(squeeze(strain(:,:,2,3))-flipud(squeeze(strain(:,:,2,3))));
+    
+    De_E(:,:,3,1,1) = 0.25*(squeeze(strain(:,:,3,1))+flipud(squeeze(strain(:,:,3,1))));
+    De_E(:,:,3,2,1) = 0.25*(squeeze(strain(:,:,3,2))-flipud(squeeze(strain(:,:,3,2))));
+    De_E(:,:,3,3,1) = 0.25*(squeeze(strain(:,:,3,3))+flipud(squeeze(strain(:,:,3,3))));
+    
+    % Mode II
+    De_E(:,:,1,1,2) = 0.25*(squeeze(strain(:,:,1,1))-flipud(squeeze(strain(:,:,1,1))));
+    De_E(:,:,1,2,2) = 0.25*(squeeze(strain(:,:,1,2))+flipud(squeeze(strain(:,:,1,2))));
+    De_E(:,:,1,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+    
+    De_E(:,:,2,1,2) = 0.25*(squeeze(strain(:,:,2,1))+flipud(squeeze(strain(:,:,2,1))));
+    De_E(:,:,2,2,2) = 0.25*(squeeze(strain(:,:,2,2))-flipud(squeeze(strain(:,:,2,2))));
+    De_E(:,:,2,3,2) = zeros(size(squeeze(A(:,:,1,1))));
+    
+    De_E(:,:,3,1,2) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,3,2,2) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,3,3,2) = 0.25*(squeeze(strain(:,:,3,3))-flipud(squeeze(strain(:,:,3,3))));
+    
+    % Mode III
+    De_E(:,:,1,1,3) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,1,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,1,3,3) = 0.25*(squeeze(strain(:,:,1,3))-flipud(squeeze(strain(:,:,1,3))));
+    
+    De_E(:,:,2,1,3) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,2,2,3) = zeros(size(squeeze(A(:,:,1,1))));
+    De_E(:,:,2,3,3) = 0.25*(squeeze(strain(:,:,2,3))+flipud(squeeze(strain(:,:,2,3))));
+    
+    De_E(:,:,3,1,3) = 0.25*(squeeze(strain(:,:,3,1))-flipud(squeeze(strain(:,:,3,1))));
+    De_E(:,:,3,2,3) = 0.25*(squeeze(strain(:,:,3,2))+flipud(squeeze(strain(:,:,3,2))));
+    De_E(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
+    
     %% Defromation deperivative decompostion 
     % Mode I
     du_dx(:,:,1,1,1) = 0.5*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))))-1;
@@ -513,9 +584,8 @@ if isfield(Maps,'A11')
             end
         end
     end
-else
-    if ~isfield(Maps,'Stiffness') 
-        De_E = du_dx;
+elseif ~isfield(Maps,'A11') % defromation gradient dudx
+    if ~isfield(Maps,'Stiffness') % linear istropic material
         % Chauchy stress tensor, assming linear-elastic, isotropic material for
         De_S(:,:,1,1,:) = Maps.E/(1-Maps.nu^2)*(De_E(:,:,1,1,:) + ...
             Maps.nu*(De_E(:,:,2,2,:) + De_E(:,:,3,3,:)));
@@ -533,11 +603,11 @@ else
         for yi = 1:size(Maps.E11,1)
             for xi = 1:size(Maps.E11,2)
                 for iV = 1:3
-                    e_voight = [du_dx(yi,xi,1,1,iV);    du_dx(yi,xi,2,2,iV);...
-                                du_dx(yi,xi,3,3,iV);   ... 
-                                du_dx(yi,xi,1,2,iV) + du_dx(yi,xi,2,1,iV); ...
-                                du_dx(yi,xi,1,3,iV) + du_dx(yi,xi,3,1,iV); ...
-                                du_dx(yi,xi,2,3,iV) + du_dx(yi,xi,3,2,iV)];
+                    e_voight = [De_E(yi,xi,1,1,iV);  De_E(yi,xi,2,2,iV);...
+                                De_E(yi,xi,3,3,iV);   ... 
+                                De_E(yi,xi,1,2,iV) + De_E(yi,xi,2,1,iV); ...
+                                De_E(yi,xi,1,3,iV) + De_E(yi,xi,3,1,iV); ...
+                                De_E(yi,xi,2,3,iV) + De_E(yi,xi,3,2,iV)];
                     s_voight = Maps.Stiffness*e_voight;
                     De_S(yi,xi,:,:,iV) = [s_voight(1),s_voight(4),s_voight(5);
                                           s_voight(4),s_voight(2),s_voight(6);
@@ -707,14 +777,15 @@ hold off
 [~, Ycrop(2)] = min(abs(yLin-Ycrop(2)));
 
 for iV=1:3
-    for iO=1:3
-        eval(sprintf('Crop.S%d%d = Maps.S%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
+  for iO=1:3
+     if ~isfield(Maps,'A11')
+      eval(sprintf('Crop.E%d%d = Maps.E%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
             iV,iO,iV,iO));
-        eval(sprintf('Crop.E%d%d = Maps.E%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
-            iV,iO,iV,iO));
+     elseif isfield(Maps,'A11')
         eval(sprintf('Crop.A%d%d = Maps.A%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
             iV,iO,iV,iO));
     end
+  end
 end
 
 %% XY, steps and stifness
@@ -728,32 +799,32 @@ if (Crop.Y(1) - Crop.Y(end))>0;         Crop.Y   = flip(Crop.Y,1);         end
 
 end
 %%
-function plot_DecomposedStrain(uXXd,uYYd,uZZd,uXYd,uXZd,uYZd,Maps)
+function plot_DecomposeddU(uXXd,uYYd,uZZd,uXYd,uXZd,uYZd,Maps)
 figure;
-s1=subplot(3,3,1);  	contourf(Maps.X,Maps.Y,Maps.E11,'LineStyle','none');
-title([char(949) '_{xx}'],'fontsize',19);
-axis image; axis off; colormap jet; box off;
-c  =colorbar;	cU(1,:) = c.Limits;     colorbar off;
-s2=subplot(3,3,2);  	contourf(Maps.X,Maps.Y,Maps.E12,'LineStyle','none');
-title([char(949) '_{xy}'],'fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(2,:) = c.Limits;     colorbar off;
-s3=subplot(3,3,3);  	contourf(Maps.X,Maps.Y,Maps.E31,'LineStyle','none');
-title([char(949) '_{xz}'],'fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(3,:) = c.Limits;     colorbar off;
-s5=subplot(3,3,5);  	contourf(Maps.X,Maps.Y,Maps.E22,'LineStyle','none');
-title([char(949) '_{yy}'],'fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(4,:) = c.Limits;     colorbar off;
-s6=subplot(3,3,6);  	contourf(Maps.X,Maps.Y,Maps.E32,'LineStyle','none');
-title([char(949) '_{yz}'],'fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(5,:) = c.Limits;    colorbar off;
-s9=subplot(3,3,9);  	contourf(Maps.X,Maps.Y,Maps.E33,'LineStyle','none');
-title([char(949) '_{zz}'],'fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(6,:) = c.Limits;     colorbar off;
+s1=subplot(3,3,1);  	pcolor(Maps.X,Maps.Y,Maps.E11);
+title([char(949) '_{xx}'],'fontsize',19);   shading interp;
+axis image; axis off; colormap jet;         box off;
+c  =colorbar;	cU(1,:) = c.Limits;         colorbar off;
+s2=subplot(3,3,2);  	pcolor(Maps.X,Maps.Y,Maps.E12);
+title([char(949) '_{xy}'],'fontsize',19);   shading interp;
+axis image; axis off; colormap jet;         box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(2,:) = c.Limits;         colorbar off;
+s3=subplot(3,3,3);  	pcolor(Maps.X,Maps.Y,Maps.E31);
+title([char(949) '_{xz}'],'fontsize',19);   shading interp;
+axis image; axis off; colormap jet;         box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(3,:) = c.Limits;         colorbar off;
+s5=subplot(3,3,5);  	pcolor(Maps.X,Maps.Y,Maps.E22);
+title([char(949) '_{yy}'],'fontsize',19);   shading interp;
+axis image; axis off; colormap jet;         box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(4,:) = c.Limits;         colorbar off;
+s6=subplot(3,3,6);  	pcolor(Maps.X,Maps.Y,Maps.E32);
+title([char(949) '_{yz}'],'fontsize',19);   shading interp;
+axis image; axis off; colormap jet;         box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(5,:) = c.Limits;         colorbar off;
+s9=subplot(3,3,9);  	pcolor(Maps.X,Maps.Y,Maps.E33);
+title([char(949) '_{zz}'],'fontsize',19);   shading interp;
+axis image; axis off; colormap jet;         box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(6,:) = c.Limits;         colorbar off;
 addScale([3 3 9],[Maps.X(:) Maps.Y(:)]);
 
 EId   = sqrt(0.5*((uXXd(:,:,1)-uYYd(:,:,1)).^2+(uYYd(:,:,1)-uZZd(:,:,1)).^2+...
@@ -766,20 +837,20 @@ EIIId = sqrt(0.5*((uXXd(:,:,3)-uYYd(:,:,3)).^2+(uYYd(:,:,3)-uZZd(:,:,3)).^2+...
     (uZZd(:,:,3)-uXXd(:,:,3)).^2+ ...
     (uXYd(:,:,3).^2+uYZd(:,:,3).^2+uXZd(:,:,3).^2).*6));
 
-s4=subplot(3,3,4);  	contourf(Maps.X,Maps.Y,EId,'LineStyle','none');
-title([char(949) '^{I}_M'],'fontsize',19);
-axis image; axis off;  box off; colormap jet;
-c  =colorbar;	cU(7,:) = c.Limits;     colorbar off;
-s7=subplot(3,3,7);  	contourf(Maps.X,Maps.Y,EIId,'LineStyle','none');
-title([char(949) '^{II}_M'],'fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(8,:) = c.Limits;     colorbar off;
-s8=subplot(3,3,8);  	contourf(Maps.X,Maps.Y,EIIId,'LineStyle','none');
-title([char(949) '^{III}_M'],'fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(9,:) = c.Limits;    colorbar off;
+s4=subplot(3,3,4);  	pcolor(Maps.X,Maps.Y,EId);
+title([char(949) '^{I}_M'],'fontsize',19);  shading interp;
+axis image; axis off;  box off;             colormap jet;
+c  =colorbar;	cU(7,:) = c.Limits;         colorbar off;
+s7=subplot(3,3,7);  	pcolor(Maps.X,Maps.Y,EIId);
+title([char(949) '^{II}_M'],'fontsize',19); shading interp;
+axis image; axis off; colormap jet;         box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(8,:) = c.Limits;         colorbar off;
+s8=subplot(3,3,8);  	pcolor(Maps.X,Maps.Y,EIIId);
+title([char(949) '^{III}_M'],'fontsize',19);shading interp;
+axis image; axis off; colormap jet;         box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(9,:) = c.Limits;         colorbar off;
 %
-cbax  = axes('visible', 'off');         cU(abs(cU)==1)=0;
+cbax  = axes('visible', 'off');             cU(abs(cU)==1)=0;
 caxis(cbax,[min(cU(:)) max(cU(:))]);
 h = colorbar(cbax, 'location', 'westoutside','position', [0.9011 0.1211 0.0121 0.7533] );
 h.Label.String = [char(949)];
@@ -792,29 +863,29 @@ end
 %%
 function plot_DecomposedStess(uXXd,uYYd,uZZd,uXYd,uXZd,uYZd,Maps,Saf)
 figure;
-s1=subplot(3,3,1);  	contourf(Maps.X,Maps.Y,Maps.S11*Saf*1e-9,'LineStyle','none');
-title('\sigma_{xx}','fontsize',19);
-axis image; axis off; colormap jet; box off;
+s1=subplot(3,3,1);  	pcolor(Maps.X,Maps.Y,Maps.S11*Saf*1e-9);
+title('\sigma_{xx}','fontsize',19);     shading interp;
+axis image; axis off; colormap jet;     box off;
 c  =colorbar;	cU(1,:) = c.Limits;     colorbar off;
-s2=subplot(3,3,2);  	contourf(Maps.X,Maps.Y,Maps.S12*Saf*1e-9,'LineStyle','none');
-title('\sigma_{xy}','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+s2=subplot(3,3,2);  	pcolor(Maps.X,Maps.Y,Maps.S12*Saf*1e-9);
+title('\sigma_{xy}','fontsize',19);     shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(2,:) = c.Limits;     colorbar off;
-s3=subplot(3,3,3);  	contourf(Maps.X,Maps.Y,Maps.S13*Saf*1e-9,'LineStyle','none');
-title('\sigma_{xz}','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+s3=subplot(3,3,3);  	pcolor(Maps.X,Maps.Y,Maps.S13*Saf*1e-9);
+title('\sigma_{xz}','fontsize',19);     shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(3,:) = c.Limits;     colorbar off;
-s5=subplot(3,3,5);  	contourf(Maps.X,Maps.Y,Maps.S22*Saf*1e-9,'LineStyle','none');
-title('\sigma_{yy}','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+s5=subplot(3,3,5);  	pcolor(Maps.X,Maps.Y,Maps.S22*Saf*1e-9);
+title('\sigma_{yy}','fontsize',19);     shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(4,:) = c.Limits;     colorbar off;
-s6=subplot(3,3,6);  	contourf(Maps.X,Maps.Y,Maps.S23*Saf*1e-9,'LineStyle','none');
-title('\sigma_{yz}','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(5,:) = c.Limits;    colorbar off;
-s9=subplot(3,3,9);  	contourf(Maps.X,Maps.Y,Maps.S33*Saf*1e-9,'LineStyle','none');
-title('\sigma_{zz}','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+s6=subplot(3,3,6);  	pcolor(Maps.X,Maps.Y,Maps.S23*Saf*1e-9);
+title('\sigma_{yz}','fontsize',19);     shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(5,:) = c.Limits;     colorbar off;
+s9=subplot(3,3,9);  	pcolor(Maps.X,Maps.Y,Maps.S33*Saf*1e-9);
+title('\sigma_{zz}','fontsize',19);     shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(6,:) = c.Limits;     colorbar off;
 addScale([3 3 9],[Maps.X(:) Maps.Y(:)]);
 
@@ -828,18 +899,18 @@ SIIId = sqrt(0.5*((uXXd(:,:,3)-uYYd(:,:,3)).^2+(uYYd(:,:,3)-uZZd(:,:,3)).^2+...
     (uZZd(:,:,3)-uXXd(:,:,3)).^2+ ...
     (uXYd(:,:,3).^2+uYZd(:,:,3).^2+uXZd(:,:,3).^2).*6));
 
-s4=subplot(3,3,4);  	contourf(Maps.X,Maps.Y,SId*1e-9,'LineStyle','none');
-title('\sigma^{I}_M','fontsize',19);
-axis image; axis off;  box off; colormap jet;
+s4=subplot(3,3,4);  	pcolor(Maps.X,Maps.Y,SId*1e-9);
+title('\sigma^{I}_M','fontsize',19);    shading interp;
+axis image; axis off;  box off;         colormap jet;
 c  =colorbar;	cU(7,:) = c.Limits;     colorbar off;
-s7=subplot(3,3,7);  	contourf(Maps.X,Maps.Y,SIId*1e-9,'LineStyle','none');
-title('\sigma^{II}_M','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+s7=subplot(3,3,7);  	pcolor(Maps.X,Maps.Y,SIId*1e-9);
+title('\sigma^{II}_M','fontsize',19);   shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(8,:) = c.Limits;     colorbar off;
-s8=subplot(3,3,8);  	contourf(Maps.X,Maps.Y,SIIId*1e-9,'LineStyle','none');
-title('\sigma^{III}_M','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(9,:) = c.Limits;    colorbar off;
+s8=subplot(3,3,8);  	pcolor(Maps.X,Maps.Y,SIIId*1e-9);
+title('\sigma^{III}_M','fontsize',19);  shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(9,:) = c.Limits;     colorbar off;
 %
 cbax  = axes('visible', 'off');         cU(abs(cU)==1)=0;
 caxis(cbax,[min(cU(:)) max(cU(:))]);
@@ -854,29 +925,29 @@ end
 %%
 function plot_DecomposedA(uXXd,uYYd,uZZd,uXYd,uXZd,uYZd,Maps)
 figure;
-s1=subplot(3,3,1);  	contourf(Maps.X,Maps.Y,Maps.A11,'LineStyle','none');
-title('A_{xx}','fontsize',19);
-axis image; axis off; colormap jet; box off;
+s1=subplot(3,3,1);  	pcolor(Maps.X,Maps.Y,Maps.A11-1);
+title('\nablau_{xx}','fontsize',19);          shading interp;
+axis image; axis off; colormap jet;     box off;
 c  =colorbar;	cU(1,:) = c.Limits;     colorbar off;
-s2=subplot(3,3,2);  	contourf(Maps.X,Maps.Y,Maps.A12,'LineStyle','none');
-title('A_{xy}','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+s2=subplot(3,3,2);  	pcolor(Maps.X,Maps.Y,Maps.A12);
+title('\nablau_{xy}','fontsize',19);          shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(2,:) = c.Limits;     colorbar off;
-s3=subplot(3,3,3);  	contourf(Maps.X,Maps.Y,Maps.A13,'LineStyle','none');
-title('A_{xz}','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+s3=subplot(3,3,3);  	pcolor(Maps.X,Maps.Y,Maps.A13);
+title('\nablau_{xz}','fontsize',19);          shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(3,:) = c.Limits;     colorbar off;
-s5=subplot(3,3,5);  	contourf(Maps.X,Maps.Y,Maps.A22,'LineStyle','none');
-title('A_{yy}','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+s5=subplot(3,3,5);  	pcolor(Maps.X,Maps.Y,Maps.A22-1);
+title('\nablau_{yy}','fontsize',19);          shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(4,:) = c.Limits;     colorbar off;
-s6=subplot(3,3,6);  	contourf(Maps.X,Maps.Y,Maps.A23,'LineStyle','none');
-title('A_{yz}','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(5,:) = c.Limits;    colorbar off;
-s9=subplot(3,3,9);  	contourf(Maps.X,Maps.Y,Maps.A33,'LineStyle','none');
-title('A_{zz}','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
+s6=subplot(3,3,6);  	pcolor(Maps.X,Maps.Y,Maps.A23);
+title('\nablau_{yz}','fontsize',19);          shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(5,:) = c.Limits;     colorbar off;
+s9=subplot(3,3,9);  	pcolor(Maps.X,Maps.Y,Maps.A33-1);
+title('\nablau_{zz}','fontsize',19);          shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(6,:) = c.Limits;     colorbar off;
 addScale([3 3 9],[Maps.X(:) Maps.Y(:)]);
 
@@ -890,31 +961,25 @@ AIIId = sqrt(0.5*((uXXd(:,:,3)-uYYd(:,:,3)).^2+(uYYd(:,:,3)-uZZd(:,:,3)).^2+...
     (uZZd(:,:,3)-uXXd(:,:,3)).^2+ ...
     (uXYd(:,:,3).^2+uYZd(:,:,3).^2+uXZd(:,:,3).^2).*6));
 
-s4=subplot(3,3,4);  	contourf(Maps.X,Maps.Y,AId*1e-9,'LineStyle','none');
-title('A^{I}_M','fontsize',19);
-axis image; axis off;  box off; colormap jet;
-c  =colorbar;	co(7,:) = c.Limits;     colorbar off;
-s7=subplot(3,3,7);  	contourf(Maps.X,Maps.Y,AIId*1e-9,'LineStyle','none');
-title('A^{II}_M','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	co(8,:) = c.Limits;     colorbar off;
-s8=subplot(3,3,8);  	contourf(Maps.X,Maps.Y,AIIId*1e-9,'LineStyle','none');
-title('A^{III}_M','fontsize',19);
-axis image; axis off; colormap jet; box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	co(9,:) = c.Limits;    colorbar off;
+s4=subplot(3,3,4);  	pcolor(Maps.X,Maps.Y,AId);
+title('\nablau^{I}_M','fontsize',19);   shading interp;
+axis image; axis off;  box off;         colormap jet;
+c  =colorbar;	cU(7,:) = c.Limits;     colorbar off;
+s7=subplot(3,3,7);  	pcolor(Maps.X,Maps.Y,AIId);
+title('\nablau^{II}_M','fontsize',19);  shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(8,:) = c.Limits;     colorbar off;
+s8=subplot(3,3,8);  	pcolor(Maps.X,Maps.Y,AIIId);
+title('\nablau^{III}_M','fontsize',19); shading interp;
+axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(9,:) = c.Limits;     colorbar off;
 %
 cbax  = axes('visible', 'off');         cU(abs(cU)==1)=0;
-caxis(cbax,[1+min(cU(:)) 1-min(cU(:))]);
+caxis(cbax,[min(cU(:)) max(cU(:))]);
 h = colorbar(cbax, 'location', 'westoutside','position', [0.9011 0.1211 0.0121 0.7533] );
-h.Label.String = 'A_0';
+h.Label.String = '\nablau';
 h.Label.FontSize = 30;
-set([s1 s2 s3  s5 s6   s9],"clim",caxis);
-cbax  = axes('visible', 'off');         co(abs(co)==1)=0;
-caxis(cbax,[min(co(:)) max(co(:))]);
-h = colorbar(cbax, 'location', 'westoutside','position', [0.1267 0.1061 0.0129 0.4873] );
-h.Label.String = 'A_0';
-h.Label.FontSize = 30;
-set([s4 s7 s8],"clim",caxis);
+set([s1 s2 s3 s4 s5 s6 s7 s8 s9],"clim",caxis);
 %}
 set(gcf,'position',[348 59 1396 932]);
 end
@@ -932,7 +997,7 @@ ylabel('K (MPa m^{0.5})'); hold off
 if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
 yyaxis right;
 plot(Contour,J.Raw,'r--<','MarkerEdgeColor','r','LineWidth',1.5,'MarkerFaceColor','r');
-ylabel('J [J/m^2]');        ylim([0 max(J.Raw)+min(J.Raw)/4]);
+ylabel('J (J/m^2)');        ylim([0 max(J.Raw)+min(J.Raw)/4]);
 legend(['K_{I} = '     num2str(KI.true)   ' ± ' num2str(KI.div)  ' MPa\surdm' ],...
     ['K_{II} = '       num2str(KII.true)  ' ± ' num2str(KII.div) ' MPa\surdm' ],...
     ['K_{III} = '      num2str(KIII.true) ' ± ' num2str(KIII.div) ' MPa\surdm' ],...

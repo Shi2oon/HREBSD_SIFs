@@ -3,7 +3,7 @@ function [Maps,M4,alldata] = Calibration_2DKIII(KI,KII,KIII)
               close all                   
 % Domain size (square, crack tip at centre).
 Maps.Mat          = 'Calibration';
-Maps.type         = 'A';
+Maps.type         = 'E';
 Maps.input_unit   = 'm';        % meter (m) or milmeter (mm) or micrometer(um);
 Maps.units.xy     = Maps.input_unit; 
 Maps.units.S      = 'Pa';      
@@ -73,27 +73,27 @@ Maps.xo = [-0.01;-0.99]*saf;        Maps.xm = [0.01;-0.99]*saf;
 Maps.yo = [0.0026;0.0026]*saf;      Maps.ym = [0.03;-0.03]*saf;
 
 
-%%
 %% JMAN approach (without FEM) - Standard J-integral.
+% calculating the displacement gradient tensors
 [Maps.E11,Maps.E12,Maps.E13] = crackgradient(M4.Ux,Maps.stepsize);
 [Maps.E21,Maps.E22,Maps.E23] = crackgradient(M4.Uy,Maps.stepsize);
 [Maps.E31,Maps.E32,Maps.E33] = crackgradient(M4.Uz,Maps.stepsize);
 alldata = [Maps.X(:) Maps.Y(:) Maps.Z(:) Maps.E11(:) Maps.E12(:) Maps.E13(:)...
      Maps.E21(:) Maps.E22(:) Maps.E23(:) Maps.E31(:) Maps.E32(:) Maps.E33(:)]; 
 %%
-eXX = Maps.E11;
-eYY = Maps.E22;
-eZZ = Maps.E33;
-eXY = 1/2*(Maps.E12+Maps.E21);
-eXZ = 1/2*(Maps.E13+Maps.E31);
-eYZ = 1/2*(Maps.E23+Maps.E32);
+% eXX = Maps.E11;
+% eYY = Maps.E22;
+% eZZ = Maps.E33;
+% eXY = 1/2*(Maps.E12+Maps.E21);
+% eXZ = 1/2*(Maps.E13+Maps.E31);
+% eYZ = 1/2*(Maps.E23+Maps.E32);
 % Chauchy stress tensor, assuming linear-elastic, isotropic material
-Maps.S11 = Maps.E/(1-Maps.nu^2)*(eXX+Maps.nu*(eYY+eZZ));
-Maps.S22 = Maps.E/(1-Maps.nu^2)*(eYY+Maps.nu*(eXX+eZZ));
-Maps.S33 = Maps.E/(1-Maps.nu^2)*(eZZ+Maps.nu*(eXX+eYY));
-Maps.S12 = 2*G*eXY;
-Maps.S13 = 2*G*eXZ;
-Maps.S23 = 2*G*eYZ;
+% Maps.S11 = Maps.E/(1-Maps.nu^2)*(eXX+Maps.nu*(eYY+eZZ));
+% Maps.S22 = Maps.E/(1-Maps.nu^2)*(eYY+Maps.nu*(eXX+eZZ));
+% Maps.S33 = Maps.E/(1-Maps.nu^2)*(eZZ+Maps.nu*(eXX+eYY));
+% Maps.S12 = 2*G*eXY;
+% Maps.S13 = 2*G*eXZ;
+% Maps.S23 = 2*G*eYZ;
 end
 
 %% Support function
