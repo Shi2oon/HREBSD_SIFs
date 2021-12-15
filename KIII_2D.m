@@ -36,7 +36,7 @@ close all;
 % volumetric change.
 
 % Example:
-% [MatProp,~,alldata] = Calibration_2DKIII(3,5,1);
+% [MatProp,~,alldata] = Calibration_2DKIII(3,1,2);
 % [J,KI,KII,KIII] = KIII_2D(alldata,MatProp);% or just MatProp
 % [J,KI,KII,KIII] = KIII_2D(MatProp); % as desigignated maps
 
@@ -46,23 +46,27 @@ if size(Maps,2) > 1
     alldata = Maps; clear Maps
     if size(alldata,2) == 5
         alldata = [alldata(:,1) alldata(:,2) zeros(size(alldata(:,2))) ...
-                   alldata(:,3) alldata(:,5) zeros(size(alldata(:,2))) ...
-                   alldata(:,5) alldata(:,4) zeros(size(alldata(:,2))) ...
-                   zeros(size(alldata(:,2))) zeros(size(alldata(:,2))) ...
-                   zeros(size(alldata(:,2)))];
+            alldata(:,3) alldata(:,5) zeros(size(alldata(:,2))) ...
+            alldata(:,5) alldata(:,4) zeros(size(alldata(:,2))) ...
+            zeros(size(alldata(:,2))) zeros(size(alldata(:,2))) ...
+            zeros(size(alldata(:,2)))];
     end
     [~,Maps]=reshapeStrain(alldata);
     if size(MatProp,1) == 6
         Maps.Stiffness = MatProp;
     else
-        Maps.E  = MatProp.E;
-        Maps.nu = MatProp.nu;
-        Maps.stressstat = MatProp.stressstat;
-    	Maps.units.xy = MatProp.units.xy;
-        Maps.units.St = MatProp.units.St;
-        if isfield(MatProp,'SavingD')
-            Maps.SavingD = MatProp.SavingD;
+        if isfield(MatProp,'Stiffness')
+            Maps.Stiffness = MatProp.Stiffness;
+        else
+            Maps.E  = MatProp.E;
+            Maps.nu = MatProp.nu;
         end
+        Maps.stressstat = MatProp.stressstat;
+        Maps.units.xy = MatProp.units.xy;
+        Maps.units.St = MatProp.units.St;
+%         if isfield(MatProp,'SavingD')
+%             Maps.SavingD = MatProp.SavingD;
+%         end
     end
 end
 %
@@ -70,9 +74,9 @@ end
 if ~isfield(Maps,'A11')
     imagesc(Maps.E11);
 elseif isfield(Maps,'A11')
-    imagesc(Maps.A11);    
+    imagesc(Maps.A11);
 end
-    axis tight; axis image; axis off
+axis tight; axis image; axis off
 set(gcf,'position',[737 287 955 709]);
 %
 opts.Interpreter = 'tex';       % Include the desired Default answer
@@ -82,11 +86,11 @@ answer           = questdlg(quest,'Boundary Condition','Y','N', opts);
 if strcmpi(answer,'Y') % crop data
     [Crop] = CroppingEqually(Maps);
     Maps.X   = Crop.X;      Maps.Y   = Crop.Y;      Maps.Z   = Crop.Z;
-    if ~isfield(Maps,'A11') 
-    Maps.E11 = Crop.E11;    Maps.E12 = Crop.E12;    Maps.E13 = Crop.E13;
-    Maps.E21 = Crop.E21;    Maps.E22 = Crop.E22;    Maps.E23 = Crop.E23;
-    Maps.E31 = Crop.E31;    Maps.E32 = Crop.E32;    Maps.E33 = Crop.E33;
-    elseif isfield(Maps,'A11')   
+    if ~isfield(Maps,'A11')
+        Maps.E11 = Crop.E11;    Maps.E12 = Crop.E12;    Maps.E13 = Crop.E13;
+        Maps.E21 = Crop.E21;    Maps.E22 = Crop.E22;    Maps.E23 = Crop.E23;
+        Maps.E31 = Crop.E31;    Maps.E32 = Crop.E32;    Maps.E33 = Crop.E33;
+    elseif isfield(Maps,'A11')
         Maps.A11 = Crop.A11;    Maps.A12 = Crop.A12;    Maps.A13 = Crop.A13;
         Maps.A21 = Crop.A21;    Maps.A22 = Crop.A22;    Maps.A23 = Crop.A23;
         Maps.A31 = Crop.A31;    Maps.A32 = Crop.A32;    Maps.A33 = Crop.A33;
@@ -164,33 +168,39 @@ DataSize = [size(Maps.E11),1];
 %% Decomposition method.
 [du_dx,E,S] = decomposeA0(Maps);
 Wd = 0.5*(E(:,:,1,1,:).*S(:,:,1,1,:) + E(:,:,1,2,:).*S(:,:,1,2,:) + E(:,:,1,3,:).*S(:,:,1,3,:)...
-        + E(:,:,2,1,:).*S(:,:,2,1,:) + E(:,:,2,2,:).*S(:,:,2,2,:) + E(:,:,2,3,:).*S(:,:,2,3,:)...
-        + E(:,:,3,1,:).*S(:,:,3,1,:) + E(:,:,3,2,:).*S(:,:,3,2,:) + E(:,:,3,3,:).*S(:,:,3,3,:));
+    + E(:,:,2,1,:).*S(:,:,2,1,:) + E(:,:,2,2,:).*S(:,:,2,2,:) + E(:,:,2,3,:).*S(:,:,2,3,:)...
+    + E(:,:,3,1,:).*S(:,:,3,1,:) + E(:,:,3,2,:).*S(:,:,3,2,:) + E(:,:,3,3,:).*S(:,:,3,3,:));
 %
 % Decomposed Plots
 if isfield(Maps,'A11')
     plot_DecomposedA(du_dx(:,:,1,1,:),du_dx(:,:,2,2,:),du_dx(:,:,3,3,:),du_dx(:,:,1,2,:),...
-                     du_dx(:,:,1,3,:),du_dx(:,:,2,3,:),Maps);
+        du_dx(:,:,1,3,:),du_dx(:,:,2,3,:),Maps);
     if isfield(Maps,'SavingD')
-        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_du.fig']);
-        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_du.tif']);  close
+        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_du.fig']);
+        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_du.tif']);  close
     end
 end
 if isfield(Maps,'E11')
-    plot_DecomposeddU(E(:,:,1,1,:),E(:,:,2,2,:),E(:,:,3,3,:),E(:,:,1,2,:),...
-                          E(:,:,1,3,:),E(:,:,2,3,:),Maps);
+    plot_DecomposeddU(du_dx,Maps);
     if isfield(Maps,'SavingD')
-        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Strain.fig']);
-        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Strain.tif']);  close
+        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_du.fig']);
+        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_du.tif']);  close
+    end
+    
+    plot_DecomposedStrain(E(:,:,1,1,:),E(:,:,2,2,:),E(:,:,3,3,:),E(:,:,1,2,:),...
+        E(:,:,1,3,:),E(:,:,2,3,:),Maps);
+    if isfield(Maps,'SavingD')
+        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Strain.fig']);
+        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Strain.tif']);  close
     end
 end
 if isfield(Maps,'S11')
     plot_DecomposedStess(S(:,:,1,1,:),S(:,:,2,2,:),S(:,:,3,3,:),S(:,:,1,2,:),...
         S(:,:,1,3,:),S(:,:,2,3,:),Maps,Saf);
     if isfield(Maps,'SavingD')
-        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Stress.fig']);
-        saveas(gcf, [fileparts(Maps.SavingD) '_Decomposed_Stress.tif']);  close
-    end      
+        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Stress.fig']);
+        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Stress.tif']);  close
+    end
 end
 %}
 %%
@@ -207,9 +217,9 @@ dQdX(dQdX.*dQdY~=0) = 0;
 dA = ones(DataSize).*Maps.stepsize^2;
 
 JAd = ((S(:,:,1,1,:).*du_dx(:,:,1,1,:) + S(:,:,1,2,:).*du_dx(:,:,2,1,:)+...
-        S(:,:,1,3,:).*du_dx(:,:,3,1,:) - Wd).*dQdX +  (S(:,:,2,2,:).*...
-        du_dx(:,:,2,1,:) +S(:,:,1,2,:).*du_dx(:,:,1,1,:)+...
-        S(:,:,2,3,:).*du_dx(:,:,3,1,:)).*dQdY).*dA;
+    S(:,:,1,3,:).*du_dx(:,:,3,1,:) - Wd).*dQdX +  (S(:,:,2,2,:).*...
+    du_dx(:,:,2,1,:) +S(:,:,1,2,:).*du_dx(:,:,1,1,:)+...
+    S(:,:,2,3,:).*du_dx(:,:,3,1,:)).*dQdY).*dA;
 % Contour selection
 mid = floor(DataSize(1)/2);
 [a,b] = meshgrid(1:DataSize(1));
@@ -227,7 +237,7 @@ J.Raw = abs(J.Raw);
 J.KRaw(1:2,:) = sqrt(J.Raw(1:2,:)*Maps.E);
 J.KRaw(3,:) = sqrt(J.Raw(3,:)*2*Maps.G);      % Mode III
 J.JRaw = J.Raw;
-J.Raw = sum(J.Raw); 
+J.Raw = sum(J.Raw);
 %
 %%
 figure; plot(J.Raw); legend('J')%trim acess
@@ -259,9 +269,9 @@ K.div    = round(std(((K.Raw(contrs:end))),1),dic);
 %
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '_J_K.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '_J_K.tif']);  close all
-    save([fileparts(Maps.SavingD) '_KIII_2D.mat'],'Maps','J','K','KI','KII','KIII','saf');
+    saveas(gcf, [fileparts(Maps.SavingD) '\J_K.fig']);
+    saveas(gcf, [fileparts(Maps.SavingD) '\J_K.tif']);  close all
+    save([fileparts(Maps.SavingD) '\KIII_2D.mat'],'Maps','J','K','KI','KII','KIII','saf');
 end
 %}
 end
@@ -270,7 +280,7 @@ end
 function [du_dx,De_E,De_S] = decomposeA0(Maps)
 for iV=1:3
     for xi=1:3
-        if isfield(Maps,'A11') 
+        if isfield(Maps,'A11')
             % for xEBSD the full components are avilable we will use the stmmerical
             % components for strain and stress calculations and the rest for
             % J-intergal calcualtions
@@ -452,7 +462,7 @@ elseif isfield(Maps,'A11') % decompose the deformaion tensor du = A0-eye(3);
     De_E(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
         end
     end
-%}
+    %}
     %% strain decompostion (split then decompose)
     for ix = 1:size(Maps.A11,1)
         for iy = 1:size(Maps.A11,2)
@@ -504,7 +514,7 @@ elseif isfield(Maps,'A11') % decompose the deformaion tensor du = A0-eye(3);
     De_E(:,:,3,2,3) = 0.25*(squeeze(strain(:,:,3,2))+flipud(squeeze(strain(:,:,3,2))));
     De_E(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
     
-    %% Defromation deperivative decompostion 
+    %% Defromation deperivative decompostion
     % Mode I
     du_dx(:,:,1,1,1) = 0.5*(squeeze(A(:,:,1,1)) + flipud(squeeze(A(:,:,1,1))))-1;
     du_dx(:,:,1,2,1) = 0.5*(squeeze(A(:,:,1,2)) + flipud(squeeze(A(:,:,1,2))));
@@ -543,7 +553,7 @@ elseif isfield(Maps,'A11') % decompose the deformaion tensor du = A0-eye(3);
     du_dx(:,:,3,1,3) = 0.5*(squeeze(A(:,:,3,1)) - flipud(squeeze(A(:,:,3,1))));
     du_dx(:,:,3,2,3) = 0.5*(squeeze(A(:,:,3,2)) - flipud(squeeze(A(:,:,3,2))));
     du_dx(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
- %}   
+    %}
 end
 
 %%
@@ -554,7 +564,7 @@ if isfield(Maps,'A11')
             for xi=1:size(De_E,2)
                 strain=permute(tmp(yi,xi,iV,:,:),[4 5 1 2 3]);
                 e_voight=[strain(1,1);  strain(2,2);    strain(3,3);...
-                          2*strain(2,1);2*strain(3,1);  2*strain(3,2)];
+                    2*strain(2,1);2*strain(3,1);  2*strain(3,2)];
                 % this is in contention
                 %{
                 A0 = strain=permute(tmp(yi,xi,iV,:,:),[4 5 1 2 3]);
@@ -576,11 +586,11 @@ if isfield(Maps,'A11')
                 
                 %convert to the tensors
                 De_S(yi,xi,:,:,iV) = [s_voight(1),s_voight(4),s_voight(5);
-                                      s_voight(4),s_voight(2),s_voight(6);
-                                      s_voight(5),s_voight(6),s_voight(3)];
+                    s_voight(4),s_voight(2),s_voight(6);
+                    s_voight(5),s_voight(6),s_voight(3)];
                 De_E(yi,xi,:,:,iV)=  [e_voight(1),  e_voight(4)/2,e_voight(5)/2;
-                                      e_voight(4)/2,e_voight(2),  e_voight(6)/2;
-                                      e_voight(5)/2,e_voight(6)/2,e_voight(3)];
+                    e_voight(4)/2,e_voight(2),  e_voight(6)/2;
+                    e_voight(5)/2,e_voight(6)/2,e_voight(3)];
             end
         end
     end
@@ -604,17 +614,17 @@ elseif ~isfield(Maps,'A11') % defromation gradient dudx
             for xi = 1:size(Maps.E11,2)
                 for iV = 1:3
                     e_voight = [De_E(yi,xi,1,1,iV);  De_E(yi,xi,2,2,iV);...
-                                De_E(yi,xi,3,3,iV);   ... 
-                                De_E(yi,xi,1,2,iV) + De_E(yi,xi,2,1,iV); ...
-                                De_E(yi,xi,1,3,iV) + De_E(yi,xi,3,1,iV); ...
-                                De_E(yi,xi,2,3,iV) + De_E(yi,xi,3,2,iV)];
+                        De_E(yi,xi,3,3,iV);   ...
+                        De_E(yi,xi,1,2,iV) + De_E(yi,xi,2,1,iV); ...
+                        De_E(yi,xi,1,3,iV) + De_E(yi,xi,3,1,iV); ...
+                        De_E(yi,xi,2,3,iV) + De_E(yi,xi,3,2,iV)];
                     s_voight = Maps.Stiffness*e_voight;
                     De_S(yi,xi,:,:,iV) = [s_voight(1),s_voight(4),s_voight(5);
-                                          s_voight(4),s_voight(2),s_voight(6);
-                                          s_voight(5),s_voight(6),s_voight(3)];
+                        s_voight(4),s_voight(2),s_voight(6);
+                        s_voight(5),s_voight(6),s_voight(3)];
                     De_E(yi,xi,:,:,iV)=[e_voight(1),  e_voight(4)/2,e_voight(5)/2;
-                                        e_voight(4)/2,e_voight(2),  e_voight(6)/2;
-                                        e_voight(5)/2,e_voight(6)/2,e_voight(3)];
+                        e_voight(4)/2,e_voight(2),  e_voight(6)/2;
+                        e_voight(5)/2,e_voight(6)/2,e_voight(3)];
                 end
             end
         end
@@ -777,15 +787,15 @@ hold off
 [~, Ycrop(2)] = min(abs(yLin-Ycrop(2)));
 
 for iV=1:3
-  for iO=1:3
-     if ~isfield(Maps,'A11')
-      eval(sprintf('Crop.E%d%d = Maps.E%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
-            iV,iO,iV,iO));
-     elseif isfield(Maps,'A11')
-        eval(sprintf('Crop.A%d%d = Maps.A%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
-            iV,iO,iV,iO));
+    for iO=1:3
+        if ~isfield(Maps,'A11')
+            eval(sprintf('Crop.E%d%d = Maps.E%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
+                iV,iO,iV,iO));
+        elseif isfield(Maps,'A11')
+            eval(sprintf('Crop.A%d%d = Maps.A%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
+                iV,iO,iV,iO));
+        end
     end
-  end
 end
 
 %% XY, steps and stifness
@@ -798,8 +808,56 @@ if (Crop.X(1) - Crop.X(end))>0;         Crop.X   = flip(Crop.X,2);         end
 if (Crop.Y(1) - Crop.Y(end))>0;         Crop.Y   = flip(Crop.Y,1);         end
 
 end
+
 %%
-function plot_DecomposeddU(uXXd,uYYd,uZZd,uXYd,uXZd,uYZd,Maps)
+function plot_DecomposeddU(du_dx,Maps)
+figure;
+iV=0;   Mo = {'I','II','III'}; KK = {'x','y','z'};
+for ii=1:3
+    for ij=1:3
+        eval(sprintf('pD = Maps.E%d%d;',ii,ij));
+        if ~sum(pD(:)) == 0
+            iV= iV+1;
+            s{iV}=subplot(9,3,iV);
+            pcolor(Maps.X,Maps.Y,pD); clear pD
+            title(['\nablau_{' KK{ii} KK{ij} '}'],'fontsize',12);   shading interp;
+            axis image; axis off; colormap jet;         box off;
+            c  =colorbar;	cU(iV,:) = c.Limits;         colorbar off;
+        end
+    end
+end
+for iO =1:3
+    for ii=1:3
+        for ij=1:3
+            pD = squeeze(du_dx(:,:,ii,ij,iO));
+            if ~sum(pD(:)) == 0
+                iV= iV+1;
+                s{iV}=subplot(9,3,iV);
+                pcolor(Maps.X,Maps.Y,pD); clear pD
+                title(['\nablau^{' Mo{iO} '}_{' KK{ii} KK{ij} '}'],'fontsize',12);
+                shading interp;
+                axis image; axis off; colormap jet;         box off;
+                c  =colorbar;	cU(iV,:) = c.Limits;         colorbar off;
+            end
+        end
+    end
+end
+addScale([9 3 iV],[Maps.X(:) Maps.Y(:)]);
+
+cbax  = axes('visible', 'off');             cU(abs(cU)==1)=0;
+caxis(cbax,[min(cU(:)) max(cU(:))]);
+h = colorbar(cbax, 'location', 'westoutside','position', [0.9011 0.1211 0.0121 0.7533] );
+h.Label.String = '\nablau';
+h.Label.FontSize = 30;
+for iO = 1:length(s)
+    set(s{iO},"clim",caxis);
+end
+%}
+set(gcf,'position',[348 59 1396 932]);
+end
+
+%%
+function plot_DecomposedStrain(uXXd,uYYd,uZZd,uXYd,uXZd,uYZd,Maps)
 figure;
 s1=subplot(3,3,1);  	pcolor(Maps.X,Maps.Y,Maps.E11);
 title([char(949) '_{xx}'],'fontsize',19);   shading interp;
@@ -1026,24 +1084,24 @@ function addScale(No,alldata)
 % funciton to add a measurment line to the graph, you can either input
 % number of the suplots or the exact suplot where you want to add the scale
 % bar
-    if length(No) == 1      && No == 2
-        subplot(1,2,1); AddScalePar(alldata(:,1),alldata(:,2))
-        subplot(1,2,2); AddScalePar(alldata(:,1),alldata(:,2))
-    elseif length(No) == 1  && No == 3
-        subplot(1,3,1); AddScalePar(alldata(:,1),alldata(:,2))
-        subplot(1,3,2); AddScalePar(alldata(:,1),alldata(:,2))
-        subplot(1,3,3); AddScalePar(alldata(:,1),alldata(:,2))
-    elseif length(No) == 1	&& No == 1
-        AddScalePar(alldata(:,1),alldata(:,2));
-    elseif length(No) == 3
-        subplot(No(1),No(2),No(3)); AddScalePar(alldata(:,1),alldata(:,2));
-    end
+if length(No) == 1      && No == 2
+    subplot(1,2,1); AddScalePar(alldata(:,1),alldata(:,2))
+    subplot(1,2,2); AddScalePar(alldata(:,1),alldata(:,2))
+elseif length(No) == 1  && No == 3
+    subplot(1,3,1); AddScalePar(alldata(:,1),alldata(:,2))
+    subplot(1,3,2); AddScalePar(alldata(:,1),alldata(:,2))
+    subplot(1,3,3); AddScalePar(alldata(:,1),alldata(:,2))
+elseif length(No) == 1	&& No == 1
+    AddScalePar(alldata(:,1),alldata(:,2));
+elseif length(No) == 3
+    subplot(No(1),No(2),No(3)); AddScalePar(alldata(:,1),alldata(:,2));
+end
 end
 
 function AddScalePar(X,Y)
 X = unique(X);         Y = unique(Y);
 hold on; line([X(ceil(end-length(X)*0.05)),X(end-ceil(length(X)*0.15))],...
-            [Y(ceil(length(Y)*0.05)),Y(ceil(length(Y)*0.05))],'Color','k','LineWidth',5)
+    [Y(ceil(length(Y)*0.05)),Y(ceil(length(Y)*0.05))],'Color','k','LineWidth',5)
 ht = text(double(X(end-ceil(length(X)*0.24))),double(Y(ceil(length(Y)*0.14)))...
     ,[num2str(round(abs(X(ceil(length(X)*0.05))-X(ceil(length(X)*0.15))),1)) '\mum']);
 set(ht,'FontSize',16,'FontWeight','Bold')
