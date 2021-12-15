@@ -64,9 +64,9 @@ if size(Maps,2) > 1
         Maps.stressstat = MatProp.stressstat;
         Maps.units.xy = MatProp.units.xy;
         Maps.units.St = MatProp.units.St;
-%         if isfield(MatProp,'SavingD')
-%             Maps.SavingD = MatProp.SavingD;
-%         end
+        if isfield(MatProp,'SavingD')
+            Maps.SavingD = MatProp.SavingD;
+        end
     end
 end
 %
