@@ -5,6 +5,6 @@
 [J,KI,KII,KIII] = KIII_2D(MatProp);         % or just MatProp
 
 %% HR-EBSD data
-filename = 'S3_4_20kV_15nA_200ms_XEBSD';
+filename = 'Crack_in_Si_XEBSD';
 [Maps,alldata]=GetGrainData(filename);
 KIII_2D(alldata,Maps);
