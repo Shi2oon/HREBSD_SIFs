@@ -74,7 +74,7 @@ if strcmpi(Answers, 'S')
     Maps.R = Map_EBSD_MTEX(sub2ind([MicroscopeData.NROWS,MicroscopeData.NCOLS],...
         GrainData.RefPoint.prop.yi(Spec),GrainData.RefPoint.prop.xi(Spec)))...
         .orientations.matrix;
-    Maps.Stiffness = StiffnessRot(Maps.R,C_voight(:,:,Spec));
+    Maps.Stiffness = Korsunsky_StiffnessRot(Maps.R,C_voight(:,:,Spec));
     % Dim
     Maps.X   = Data.XSample;    Maps.Y   = Data.YSample;
     Maps.stepsize  =(abs(Maps.X(1,1)-Maps.X(1,2)));
@@ -175,7 +175,7 @@ alldata = [Maps.X(:)        Maps.Y(:)       zeros(size(Maps.X(:))) ...
            Maps.A11(:)-1    Maps.A12(:)     Maps.A13(:)  ...
            Maps.A21(:)      Maps.A22(:)-1   Maps.A23(:)  ...
            Maps.A31(:)      Maps.A32(:)     Maps.A33(:)-1];
-if ~strcmpi(Named, '3D')
+if strcmpi(Named, '3D')
         xLin        = Maps.X(1,:);
         [~, index1] = min(abs(xLin-Maps.xo(1)));
         [~, index2] = min(abs(xLin-Maps.xo(2)));
@@ -188,7 +188,7 @@ if ~strcmpi(Named, '3D')
                 Maps.E11(:)     Maps.E22(:)         Maps.E33(:)...
                 Maps.E12(:)     Maps.E13(:)         Maps.E23(:)];
 alldata(isnan(alldata(:,4)),:)=[];
-elseif ~strcmpi(Named, '2D')
+elseif strcmpi(Named, '2D')
     alldata = [Maps.X(:)	Maps.Y(:)	Maps.E11(:)	Maps.E22(:)	Maps.E12(:)];
 end
 
