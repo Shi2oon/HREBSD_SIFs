@@ -67,9 +67,9 @@ if strcmpi(Answers, 'S')
     Maps.A21 = A(:,:,2,1);      Maps.A22 = A(:,:,2,2);      Maps.A23 = A(:,:,2,3);
     Maps.A31 = A(:,:,3,1);      Maps.A32 = A(:,:,3,2);      Maps.A33 = A(:,:,3,3);
     
-    % stifness:  crystal orientation is defined as the rotation that transforms crystal
+    % stiffness:  crystal orientation is defined as the rotation that transforms crystal
     % coordinates, i.e., a description of a vector or a tensor with respect to the crystal
-    % reference frame, into specimen coordinates, i.e., a desciption of the same object
+    % reference frame, into specimen coordinates, i.e., a description of the same object
     % with respect to a specimen fixed reference frame.
     Maps.R = Map_EBSD_MTEX(sub2ind([MicroscopeData.NROWS,MicroscopeData.NCOLS],...
         GrainData.RefPoint.prop.yi(Spec),GrainData.RefPoint.prop.xi(Spec)))...
@@ -95,7 +95,7 @@ elseif strcmpi(Answers, 'TKD')
     SavingD = fullfile(fileparts(fname),[Named '_TKD']);  mkdir(SavingD);
 end
 
-%% Plot selcted
+%% Plot selected
 % close all;              s3=subplot(1,1,1);
 % imagesc(Data.XSample(1,:),Data.YSample(:,1),squeeze(Grain_Map_stress_sample(:,:,Spec,1,1))); %GPa
 % axis image;             set(gca,'Ydir','normal');   %axis off;
@@ -125,7 +125,7 @@ saveas(gcf,[erase(SavingD,'.mat') '.fig']); close
 if length(unique(Maps.RefID))>3;   answer = 1;
 	while sum(answer) ~= 0
         contourf(Maps.RefID); axis image; colorbar; colormap jet
-        answer = input('Which pesudo grain you want to merge [GB Parent]?, [0 0] to exit ');
+        answer = input('Which pseudo grain you want to merge [GB Parent]?, [0 0] to exit ');
         Maps.RefID(Maps.RefID==answer(1))=answer(2);
     end
     Maps.RefID(Maps.RefID==0)=NaN;
@@ -136,7 +136,7 @@ if length(unique(Maps.RefID))>3;   answer = 1;
     Maps.E11(isnan(Maps.RefID))=NaN;
 end
 %}
-%% crack cordinates
+%% crack coordinates
 % try;    Maps = isNaN_Maps(Maps);       end % trim GB
 close all;
 imagesc(Maps.X(1,:),Maps.Y(:,1),Maps.E12);
@@ -153,14 +153,24 @@ title('E_{12} :: Select the Crack, start from crack tip');
 title('E_{12} :: Select the Crack mask, start from crack tip');
 [Maps.xm,Maps.ym] = ginput(2); close
 
-%% Get stifness tensor
+%% Get stiffness tensor
 Maps.SavingD = SavingD;
 if strcmpi(Answers, 'w')
     Maps.results = fname;
+	% stiffness:  crystal orientation is defined as the rotation that transforms crystal
+    % coordinates, i.e., a description of a vector or a tensor with respect to the crystal
+    % reference frame, into specimen coordinates, i.e., a description of the same object
+    % with respect to a specimen fixed reference frame.
     [Maps.Stiffness,Maps.R] = SawpStif(Maps.results);
 end
 if strcmpi(answer, 'R')
-    Maps.Stiffness  = S2DRot(Maps.Stiffness,Maps.theta); % rotate the stifness
+	% the stiffness tensor is defined with respect to the measurement x and y, once x 
+	% once x and y are rotated the same rotation angle need to be applied to the
+	% the stiffness tensor to maintain the Euler angles x and y reference.
+	% this can be see clearly when the measurement x an y were changed for (001)
+	% Single Si Crystal as the [-110] and [110] pole kept moving.
+	% See variation with direction in fig. 3 of https://doi.org/10.1109/JMEMS.2009.2039697
+    Maps.Stiffness  = S2DRot(Maps.Stiffness,Maps.theta); % rotate the stiffness
 end
 % [Maps.Crystal] = rotateStrains(Maps,Maps.R);
 % plotStressandRot(Maps.Crystal)
