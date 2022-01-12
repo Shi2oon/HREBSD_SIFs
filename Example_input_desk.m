@@ -1,5 +1,5 @@
 % Example, synthetic data
-clc;clear;close all
+restoredefaultpath;clc;clear;close all
 [MatProp,~,alldata] = Calibration_2DKIII(3,1,2);
                
 Prop.E = 210e9; 
@@ -12,6 +12,9 @@ Prop.stressstat = 'plane_stress';
 [J,KI,KII,KIII] = KIII_2D(MatProp);         % or just MatProp
 
 %% HR-EBSD data
+clc;clear;close all
+% restoredefaultpath;clc;clear;close all
+% run('A:\OneDrive - Nexus365\GitHub\mtex-5.2.beta2\install_mtex.m')
 filename = 'Crack_in_Si_XEBSD';
 [Maps,alldata] = GetGrainData(filename);
 KIII_2D(alldata,Maps);

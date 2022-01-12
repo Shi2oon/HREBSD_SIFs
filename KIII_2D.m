@@ -255,16 +255,16 @@ contrs   = length(J.Raw);        contrs = contrs - round(contrs*0.4);
 dic = real(ceil(-log10(nanmean(rmoutliers(J.Raw(contrs:end))))))+2;
 if dic<2;       dic = 2;    end
 J.true   = round(mean((J.Raw(contrs:end))),dic);
-J.div    = round(std((J.Raw(contrs:end)),1)./3,dic);
+J.div    = round(std((J.Raw(contrs:end)),1),dic);
 KI.true  = round(mean(((KI.Raw(contrs:end)))),dic);
-KI.div   = round(std(((KI.Raw(contrs:end))),1)./3,dic);
+KI.div   = round(std(((KI.Raw(contrs:end))),1),dic);
 KII.true = round(mean(((KII.Raw(contrs:end)))),dic);
-KII.div  = round(std(((KII.Raw(contrs:end))),1)./3,dic);
+KII.div  = round(std(((KII.Raw(contrs:end))),1),dic);
 KIII.true= round(mean(((KIII.Raw(contrs:end)))),dic);
-KIII.div = round(std(((KIII.Raw(contrs:end))),1)./3,dic);
+KIII.div = round(std(((KIII.Raw(contrs:end))),1),dic);
 K.Raw    = sqrt(J.Raw*Maps.E)*1e-6;
 K.true   = round(mean(((K.Raw(contrs:end)))),dic);
-K.div    = round(std(((K.Raw(contrs:end))),1)./3,dic);
+K.div    = round(std(((K.Raw(contrs:end))),1),dic);
 %
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
