@@ -85,6 +85,9 @@ if strcmpi(Answers, 'S')
     Maps.units.xy = 'um';       Maps.units.S  = 'GPa';  Maps.units.St  = 'GPa';
     Maps.units.E  = 'Abs.';     Maps.units.W = 'rad';
     Map_RefID(Map_RefID~=Spec) = 0;   Maps.RefID = Map_RefID;
+    Maps.Mat = Map_EBSD_MTEX.mineralList{Map_EBSD_MTEX.indexedPhasesId(...
+       Map_EBSD_MTEX.phase(sub2ind([MicroscopeData.NROWS,MicroscopeData.NCOLS],...
+        GrainData.RefPoint.prop.yi(Spec),GrainData.RefPoint.prop.xi(Spec))))};
     
     %
 elseif strcmpi(Answers, 'W') || strcmpi(Answers, 'D')
