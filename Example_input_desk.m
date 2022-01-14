@@ -8,7 +8,7 @@ Prop.units.St = 'Pa';
 Prop.units.xy = 'm';
 Prop.stressstat = 'plane_stress';
 
-[J,KI,KII,KIII] = KIII_2D(alldata,Prop); % as desigignated maps
+[J,KI,KII,KIII] = KIII_2D_v2(alldata,Prop); % as desigignated maps
 [J,KI,KII,KIII] = KIII_2D(MatProp);         % or just MatProp
 
 %% HR-EBSD data
