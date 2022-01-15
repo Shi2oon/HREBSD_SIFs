@@ -69,7 +69,7 @@ end
 %
 %% prepare Data
 imagesc(Maps.du11);
-axis tight; axis image; axis off
+axis tight; axis image; axis off; colormap jet
 set(gcf,'position',[737 287 955 709]);
 %
 opts.Interpreter = 'tex';       % Include the desired Default answer
@@ -79,9 +79,9 @@ answer           = questdlg(quest,'Boundary Condition','Y','N', opts);
 if strcmpi(answer,'Y') % crop data
     [Crop] = CroppingEqually(Maps);
     Maps.X   = Crop.X;      Maps.Y   = Crop.Y;        Maps.Z   = Crop.Z;
-    Maps.du11 = Crop.du11;  Maps.du12 = Crop.du12;    Maps.E13 = Crop.du13;
-    Maps.du21 = Crop.du21;  Maps.du22 = Crop.du22;    Maps.E23 = Crop.du23;
-    Maps.du31 = Crop.du31;  Maps.du32 = Crop.du32;    Maps.E33 = Crop.du33;
+    Maps.du11 = Crop.du11;  Maps.du12 = Crop.du12;    Maps.du13 = Crop.du13;
+    Maps.du21 = Crop.du21;  Maps.du22 = Crop.du22;    Maps.du23 = Crop.du23;
+    Maps.du31 = Crop.du31;  Maps.du32 = Crop.du32;    Maps.du33 = Crop.du33;
 end
 opts.Interpreter = 'tex';       % Include the desired Default answer
 opts.Default     = 'L';         % Use the TeX interpreter to format the question
@@ -678,67 +678,7 @@ set([s1 s2 s3 s4 s5 s6 s7 s8 s9],"clim",caxis);
 set(gcf,'position',[348 59 1396 932]);
 end
 
-%%
-function plot_DecomposedA(uXXd,uYYd,uZZd,uXYd,uXZd,uYZd,Maps)
-figure;
-s1=subplot(3,3,1);  	pcolor(Maps.X,Maps.Y,Maps.A11-1);
-title('\nablau_{xx}','fontsize',19);          shading interp;
-axis image; axis off; colormap jet;     box off;
-c  =colorbar;	cU(1,:) = c.Limits;     colorbar off;
-s2=subplot(3,3,2);  	pcolor(Maps.X,Maps.Y,Maps.A12);
-title('\nablau_{xy}','fontsize',19);          shading interp;
-axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(2,:) = c.Limits;     colorbar off;
-s3=subplot(3,3,3);  	pcolor(Maps.X,Maps.Y,Maps.A13);
-title('\nablau_{xz}','fontsize',19);          shading interp;
-axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(3,:) = c.Limits;     colorbar off;
-s5=subplot(3,3,5);  	pcolor(Maps.X,Maps.Y,Maps.A22-1);
-title('\nablau_{yy}','fontsize',19);          shading interp;
-axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(4,:) = c.Limits;     colorbar off;
-s6=subplot(3,3,6);  	pcolor(Maps.X,Maps.Y,Maps.A23);
-title('\nablau_{yz}','fontsize',19);          shading interp;
-axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(5,:) = c.Limits;     colorbar off;
-s9=subplot(3,3,9);  	pcolor(Maps.X,Maps.Y,Maps.A33-1);
-title('\nablau_{zz}','fontsize',19);          shading interp;
-axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(6,:) = c.Limits;     colorbar off;
-addScale([3 3 9],[Maps.X(:) Maps.Y(:)]);
 
-AId   = sqrt(0.5*((uXXd(:,:,1)-uYYd(:,:,1)).^2+(uYYd(:,:,1)-uZZd(:,:,1)).^2+...
-    (uZZd(:,:,1)-uXXd(:,:,1)).^2+ ...
-    (uXYd(:,:,1).^2+uYZd(:,:,1).^2+uXZd(:,:,1).^2).*6));
-AIId  = sqrt(0.5*((uXXd(:,:,2)-uYYd(:,:,2)).^2+(uYYd(:,:,2)-uZZd(:,:,2)).^2+...
-    (uZZd(:,:,2)-uXXd(:,:,2)).^2+ ...
-    (uXYd(:,:,2).^2+uYZd(:,:,2).^2+uXZd(:,:,2).^2).*6));
-AIIId = sqrt(0.5*((uXXd(:,:,3)-uYYd(:,:,3)).^2+(uYYd(:,:,3)-uZZd(:,:,3)).^2+...
-    (uZZd(:,:,3)-uXXd(:,:,3)).^2+ ...
-    (uXYd(:,:,3).^2+uYZd(:,:,3).^2+uXZd(:,:,3).^2).*6));
-
-s4=subplot(3,3,4);  	pcolor(Maps.X,Maps.Y,AId);
-title('\nablau^{I}_M','fontsize',19);   shading interp;
-axis image; axis off;  box off;         colormap jet;
-c  =colorbar;	cU(7,:) = c.Limits;     colorbar off;
-s7=subplot(3,3,7);  	pcolor(Maps.X,Maps.Y,AIId);
-title('\nablau^{II}_M','fontsize',19);  shading interp;
-axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(8,:) = c.Limits;     colorbar off;
-s8=subplot(3,3,8);  	pcolor(Maps.X,Maps.Y,AIIId);
-title('\nablau^{III}_M','fontsize',19); shading interp;
-axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
-c  =colorbar;	cU(9,:) = c.Limits;     colorbar off;
-%
-cbax  = axes('visible', 'off');         cU(abs(cU)==1)=0;
-caxis(cbax,[min(cU(:)) max(cU(:))]);
-h = colorbar(cbax, 'location', 'westoutside','position', [0.9011 0.1211 0.0121 0.7533] );
-h.Label.String = '\nablau';
-h.Label.FontSize = 30;
-set([s1 s2 s3 s4 s5 s6 s7 s8 s9],"clim",caxis);
-%}
-set(gcf,'position',[348 59 1396 932]);
-end
 %%
 function plot_JKIII(KI,KII,KIII,J,stepsize,input_unit)
 Kd = [KI.Raw(:); KII.Raw(:); KIII.Raw(:)];
