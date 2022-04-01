@@ -234,7 +234,7 @@ K.div    = round(std(((K.Raw(contrs:end))),1),dic);
 %
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) 'J_K.fig']);
+    saveas(gcf, [fileparts(Maps.SavingD) '\J_K.fig']);
     saveas(gcf, [fileparts(Maps.SavingD) '\J_K.tif']);  close all
     save([fileparts(Maps.SavingD) '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps');
 end
