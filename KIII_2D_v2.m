@@ -412,7 +412,7 @@ GV = (C(1,1)-C(1,2)+3*C(4,4))/5;        % Voigt shear modulus
 
 S = C^-1;
 BR = 1/(3*S(1,1)+6*S(1,2));             % Reuss bulk modulus
-GR = 5/(4*S(1,1)-4*S(1,2)+3*S(4,4));   % Reuss shear modulus
+GR = 5/(4*S(1,1)-4*S(1,2)+3*S(4,4));    % Reuss shear modulus
 
 B = (BR+BV)/2;                          % Hill’s average bulk modulus
 G = (GR+GV)/2;                          % Hill’s average shear modulus
