@@ -1,5 +1,5 @@
 % Example, synthetic data
-restoredefaultpath;clc;clear;close all
+clc;clear;close all
 [MatProp,~,alldata] = Calibration_2DKIII(3,1,2);
                
 Prop.E = 210e9; 
