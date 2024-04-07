@@ -150,13 +150,18 @@ if isfield(Maps,'SavingD')
 end
 
 if isfield(Maps,'E11')
-    plot_DecomposedStrain(E(:,:,1,1,:),E(:,:,2,2,:),E(:,:,3,3,:),E(:,:,1,2,:),...
-        E(:,:,1,3,:),E(:,:,2,3,:),Maps);
-    if isfield(Maps,'SavingD')
-        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Strain.fig']);
-        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Strain.tif']);  close
-    end
+else
+    Maps.E11 = Maps.du11; Maps.E12 = Maps.du12;
+    Maps.E31 = Maps.du31; Maps.E22 = Maps.du22;
+    Maps.E32 = Maps.du32; Maps.E33 = Maps.du33;
 end
+plot_DecomposedStrain(E(:,:,1,1,:),E(:,:,2,2,:),E(:,:,3,3,:),E(:,:,1,2,:),...
+    E(:,:,1,3,:),E(:,:,2,3,:),Maps);
+if isfield(Maps,'SavingD')
+    saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Strain.fig']);
+    saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Strain.tif']);  close
+end
+
 if isfield(Maps,'S11')
     plot_DecomposedStess(S(:,:,1,1,:),S(:,:,2,2,:),S(:,:,3,3,:),S(:,:,1,2,:),...
         S(:,:,1,3,:),S(:,:,2,3,:),Maps,Saf);
@@ -414,16 +419,16 @@ S = C^-1;
 BR = 1/(3*S(1,1)+6*S(1,2));             % Reuss bulk modulus
 GR = 5/(4*S(1,1)-4*S(1,2)+3*S(4,4));    % Reuss shear modulus
 
-B = (BR+BV)/2;                          % Hill’s average bulk modulus
-G = (GR+GV)/2;                          % Hill’s average shear modulus
-E = 9*B*G/(3*B+G);                      % Young’s modulus (E)
-v = (3*B-E)/(6*B);                      % Poisson’s ratio
+B = (BR+BV)/2;                          % HillÂ’s average bulk modulus
+G = (GR+GV)/2;                          % HillÂ’s average shear modulus
+E = 9*B*G/(3*B+G);                      % YoungÂ’s modulus (E)
+v = (3*B-E)/(6*B);                      % PoissonÂ’s ratio
 Co = [];
 
 % K = (C(1,1)+C(2,2)+C(3,3)+2*(C(1,2)+C(2,3)+C(1,2)))/9; % istropic shear Modulus
 % Gv = (C(1,1)+C(2,2)+C(3,3)-(C(1,2)+C(2,3)+C(1,2))+2*(C(4,4)+C(5,5)+C(6,6)))/15; % Bulk Modulus
 
-%% Paper: What is the Young’s Modulus of Silicon?
+%% Paper: What is the YoungÂ’s Modulus of Silicon?
 Cc =C^-1;
 Co.Ex = 1/Cc(1,1);
 Co.Ey = 1/Cc(2,2);
@@ -694,10 +699,10 @@ if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
 yyaxis right;
 plot(Contour,J.Raw,'r--<','MarkerEdgeColor','r','LineWidth',1.5,'MarkerFaceColor','r');
 ylabel('J (J/m^2)');        ylim([0 max(J.Raw)+min(J.Raw)/4]);
-legend(['K_{I} = '     num2str(KI.true)   ' ± ' num2str(KI.div)  ' MPa\surdm' ],...
-    ['K_{II} = '       num2str(KII.true)  ' ± ' num2str(KII.div) ' MPa\surdm' ],...
-    ['K_{III} = '      num2str(KIII.true) ' ± ' num2str(KIII.div) ' MPa\surdm' ],...
-    ['J_{integral} = ' num2str(J.true)    ' ± ' num2str(J.div)   ' J/m^2'],...
+legend(['K_{I} = '     num2str(KI.true)   ' Â± ' num2str(KI.div)  ' MPa\surdm' ],...
+    ['K_{II} = '       num2str(KII.true)  ' Â± ' num2str(KII.div) ' MPa\surdm' ],...
+    ['K_{III} = '      num2str(KIII.true) ' Â± ' num2str(KIII.div) ' MPa\surdm' ],...
+    ['J_{integral} = ' num2str(J.true)    ' Â± ' num2str(J.div)   ' J/m^2'],...
     'location','northoutside','box','off');
 set(gcf,'position',[60,-70,750,1100]);grid on;  box off;
 ax1 = gca;  axPos = ax1.Position;
