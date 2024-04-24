@@ -11,7 +11,7 @@ Prop.stressstat = 'plane_stress';
 [J,KI,KII,KIII] = KIII_2D_v2(alldata,Prop); % as desigignated maps
 % [J,KI,KII,KIII] = KIII_2D(MatProp);         % or just MatProp
 
-%% HR-EBSD data
+%% HR-EBSD data, works only with data extract from xEBSD Matlab code and you need to download MTEX up to version 5.8
 clc;clear;close all
 % restoredefaultpath;clc;clear;close all
 % run('A:\OneDrive - Nexus365\GitHub\mtex-5.2.beta2\install_mtex.m')
