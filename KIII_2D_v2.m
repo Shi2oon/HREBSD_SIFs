@@ -212,6 +212,7 @@ figure; plot(J.Raw); legend('J')%trim acess
 set(gcf,'position',[98 311 1481 667])
 text(1:length(J.Raw),J.Raw,string([1:length(J.Raw)]))
 %}
+pause(0.1)
 oh = input('where to cut the contour? '); close
 
 %%
