@@ -41,13 +41,6 @@ KI = KI*1e6;                                                                    
 KII = KII*1e6;                                                                    % Mode II SIF
 KIII = KIII*1e6; 
 %
-Maps.Stiffness = [1/Maps.E          -Maps.nu/Maps.E     -Maps.nu/Maps.E 0 0 0
-                 -Maps.nu/Maps.E        1/Maps.E        -Maps.nu/Maps.E 0 0 0
-                 -Maps.nu/Maps.E    -Maps.nu/Maps.E         1/Maps.E    0 0 0
-                  0 0 0     2*(1+Maps.nu)/Maps.E                          0 0
-                  0 0 0 0       2*(1+Maps.nu)/Maps.E                        0
-                  0 0 0 0 0         2*(1+Maps.nu)/Maps.E];
-Maps.Stiffness = Maps.Stiffness^-1;
 
 % Maps.SavingD = [pwd];
 % Maps.results = [pwd];
