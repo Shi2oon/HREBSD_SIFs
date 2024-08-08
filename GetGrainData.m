@@ -34,6 +34,7 @@ if strcmpi(Answers, 'S')
     labelpoints(GrainData.RefPoint.x,GrainData.RefPoint.y,...
         GrainData.RefPoint.prop.labels,'FontSize',20);
     hold off;      set(gcf,'position',[30 50 1300 950])
+    pause(0.1)
     Spec    = input('Which Grain you want to explore?   '); % select
     SavingD = fullfile(fileparts(fname),[Named '_Grain no ' num2str(Spec)]);  
     mkdir(SavingD);
