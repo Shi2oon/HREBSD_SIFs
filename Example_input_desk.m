@@ -1,6 +1,6 @@
 % Example, synthetic data
 clc;clear;close all
-[MatProp,~,alldata] = Calibration_2DKIII(3,1,2);
+[~,~,alldata] = Calibration_2DKIII(3,1,2);
                
 Prop.E = 210e9; 
 Prop.nu = 0.3;              
