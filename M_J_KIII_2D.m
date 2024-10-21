@@ -955,7 +955,7 @@ legend(['M_{1} = ' num2str(M.true1) ' ± ' num2str(M.div1) ' J/m'], ...
     'location', 'northoutside', 'box', 'off');
 
 % Set figure size and formatting
-set(gcf, 'position', [60, -70, 750, 1000]);
+set(gcf, 'position', [800, -70, 750, 1000]);
 grid on;
 box off;
 
