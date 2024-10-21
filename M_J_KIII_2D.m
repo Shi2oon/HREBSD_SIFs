@@ -78,7 +78,7 @@ quest            = 'Do you want to Crop and Centre the Crack tip';
 answer           = questdlg(quest,'Boundary Condition','Y','N', opts);
 if strcmpi(answer,'Y') % crop data
     [Crop] = CroppingEqually(Maps);
-    Maps.X   = Crop.X;      Maps.Y   = Crop.Y;        Maps.Z   = Crop.Z;
+    Maps.X    = Crop.X;      Maps.Y   = Crop.Y;        Maps.Z   = Crop.Z;
     Maps.du11 = Crop.du11;  Maps.du12 = Crop.du12;    Maps.du13 = Crop.du13;
     Maps.du21 = Crop.du21;  Maps.du22 = Crop.du22;    Maps.du23 = Crop.du23;
     Maps.du31 = Crop.du31;  Maps.du32 = Crop.du32;    Maps.du33 = Crop.du33;
