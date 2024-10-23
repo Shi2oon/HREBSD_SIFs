@@ -48,6 +48,7 @@ if isfield(MatProp,'Operation')
         stepsize = unique(round(diff(unique(RawData.Y1(:))),4));
         [RawData.E11,RawData.E12,RawData.E13] = crackgradient(RawData.Ux,stepsize);
         [RawData.E21,RawData.E22,RawData.E23] = crackgradient(RawData.Uy,stepsize);
+        U (:,:,1) = RawData.Ux;        U (:,:,2) = RawData.Uy;
 
         if size(alldata,2)==6
             [RawData.E31,RawData.E32,RawData.E33] = crackgradient(RawData.Uz,stepsize);
@@ -56,6 +57,7 @@ if isfield(MatProp,'Operation')
                 RawData.E11(:) RawData.E12(:) RawData.E13(:) ...
                 RawData.E21(:) RawData.E22(:) RawData.E23(:) ...
                 RawData.E31(:) RawData.E32(:) RawData.E33(:)];
+            U (:,:,3) = RawData.Uz;
         else
             alldata = [RawData.X1(:) RawData.Y1(:) zeros(size(RawData.Y1(:))) ...
                 RawData.E11(:) RawData.E12(:) zeros(size(RawData.Y1(:)))...
@@ -211,15 +213,7 @@ dQdX(dQdX.*dQdY~=0) = 0;
 dA = ones(DataSize).*Maps.stepsize^2;
 dq1d(1,:,:) = dQdX;  dq1d(2,:,:) = dQdY;
 Am = [1,0; 0, 1];
-%{
-JAd = ((squeeze(S(:,:,1,1,:)).*squeeze(du_dx(:,:,1,1,:)) + ...
-    squeeze(S(:,:,1,2,:)).*squeeze(du_dx(:,:,2,1,:)) +...
-    squeeze(S(:,:,1,3,:)).*squeeze(du_dx(:,:,3,1,:)) - Wd).*dQdX + ...
-    (squeeze(S(:,:,2,2,:)).*squeeze(du_dx(:,:,2,1,:)) +...
-    squeeze(S(:,:,1,2,:)).*squeeze(du_dx(:,:,1,1,:)) +...
-    squeeze(S(:,:,2,3,:)).*squeeze(du_dx(:,:,3,1,:))).*dQdY).*dA;
-%}
-%
+
 for jj = 1:2
     for ii=1:3
         termJ(:,:,:,ii) = squeeze(S(:,:,ii,jj,:)).*squeeze(du_dx(:,:,ii,1,:));
@@ -241,7 +235,7 @@ end
 %% Equivalent SIF
 % to avoid imaginary number (needs to be solved so the code could work for
 % compressive fields
-J.Raw = abs(J.Raw);
+J.Raw = J.Raw;
 J.KRaw(1:2,:) = sqrt(J.Raw(1:2,:)*Maps.E);
 J.KRaw(3,:) = sqrt(J.Raw(3,:)*2*Maps.G);      % Mode III
 J.JRaw = J.Raw;
@@ -266,17 +260,17 @@ KIII.Raw = J.KRaw(3,:)*1e-6;
 contrs   = length(J.Raw);        contrs = contrs - round(contrs*0.4);
 dic = real(ceil(-log10(nanmean(rmoutliers(J.Raw(contrs:end))))))+2;
 if dic<2;       dic = 2;    end
-J.true   = round(mean((J.Raw(contrs:end))),dic);
-J.div    = round(std((J.Raw(contrs:end)),1),dic);
-KI.true  = round(mean(((KI.Raw(contrs:end)))),dic);
-KI.div   = round(std(((KI.Raw(contrs:end))),1),dic);
-KII.true = round(mean(((KII.Raw(contrs:end)))),dic);
-KII.div  = round(std(((KII.Raw(contrs:end))),1),dic);
-KIII.true= round(mean(((KIII.Raw(contrs:end)))),dic);
-KIII.div = round(std(((KIII.Raw(contrs:end))),1),dic);
+J.true   = round(mean(J.Raw(contrs:end)),dic);
+J.div    = round(std(J.Raw(contrs:end),1),dic);
+KI.true  = round(mean(KI.Raw(contrs:end)),dic);
+KI.div   = round(std(KI.Raw(contrs:end),1),dic);
+KII.true = round(mean(KII.Raw(contrs:end)),dic);
+KII.div  = round(std(KII.Raw(contrs:end),1),dic);
+KIII.true= round(mean(KIII.Raw(contrs:end)),dic);
+KIII.div = round(std(KIII.Raw(contrs:end),1),dic);
 K.Raw    = sqrt(J.Raw*Maps.E)*1e-6;
-K.true   = round(mean(((K.Raw(contrs:end)))),dic);
-K.div    = round(std(((K.Raw(contrs:end))),1),dic);
+K.true   = round(mean(K.Raw(contrs:end)),dic);
+K.div    = round(std(K.Raw(contrs:end),1),dic);
 %
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
@@ -298,97 +292,79 @@ Wd = squeeze(Wd);
 %% M-integral
 % displacement field measurement, FFEMS (2012), 35, ?971-984
 % Displacement gradient
-%{
-% Extract relevant values for the coordinates
-x1 = Maps.stepsize;
-x2 = Maps.stepsize;
-
-% the equation was sectioned to terms for ease and clarity
-term2 = (S(:, :, 1, 1) .* du_dx(:, :, 1, 1) + ...
-    S(:, :, 2, 1) .* du_dx(:, :, 2, 1) + ...
-    S(:, :, 3, 1) .* du_dx(:, :, 3, 1));
-term3 = (S(:, :, 1, 2) .* du_dx(:, :, 1, 1) + ...
-    S(:, :, 2, 2) .* du_dx(:, :, 2, 1) + ...
-    S(:, :, 3, 2) .* du_dx(:, :, 3, 1));
-term4 = (S(:, :, 1, 1) .* du_dx(:, :, 1, 2) + ...
-    S(:, :, 2, 1) .* du_dx(:, :, 2, 2) + ...
-    S(:, :, 3, 1) .* du_dx(:, :, 3, 2));
-term6 = (S(:, :, 1, 2) .* du_dx(:, :, 1, 2) + ...
-    S(:, :, 2, 2) .* du_dx(:, :, 2, 2) + ...
-    S(:, :, 3, 2) .* du_dx(:, :, 3, 2));
-
-MAd = (((Wd - squeeze(term2)) .*x1 .* dQdX) - (squeeze(term3) .*x1 .* dQdY) - ...
-    (squeeze(term4) .* x2 .* dQdX) + ((Wd - squeeze(term6)) .* x2 .* dQdY)) .* dA;
-
-JAd = ((squeeze(S(:,:,1,1)).*squeeze(du_dx(:,:,1,1)) + ...
-    squeeze(S(:,:,1,2)).*squeeze(du_dx(:,:,2,1)) +...
-    squeeze(S(:,:,1,3)).*squeeze(du_dx(:,:,3,1)) - Wd).*dQdX + ...
-    (squeeze(S(:,:,2,2)).*squeeze(du_dx(:,:,2,1)) +...
-    squeeze(S(:,:,1,2)).*squeeze(du_dx(:,:,1,1)) +...
-    squeeze(S(:,:,2,3)).*squeeze(du_dx(:,:,3,1))).*dQdY).*dA;
-%}
-%
-%%% emij=[0,-1;1,0]; %% for L-integral
 xx = [Maps.stepsize Maps.stepsize];
-%%% for ll=1:2
-    for kk = 1:2
-        for jj = 1:2
-            clear termJ termM termL
-            for ii=1:3
-                termJ(:,:,ii) = squeeze(S(:,:,ii,jj)).*squeeze(du_dx(:,:,ii,1,:));
-                termM(:,:,ii) = squeeze(S(:,:,ii,jj)).*squeeze(du_dx(:,:,ii,kk)).*xx(kk);
-                %%% termL1(:,:,ii) = squeeze(S(:,:,ii,ll)).*squeeze(du_dx(:,:,ii,kk)).*xx(jj);
-            end
-            JAdr(:,:,jj) =(sum(termJ,3) -Wd.*Am(1,jj)).*squeeze(dq1d(jj,:,:)).*dA;
-            MAdr(:,:,kk,jj) = (Wd.*xx(jj).*Am(kk,jj)-sum(termM,3)).*squeeze(dq1d(jj,:,:)).*dA;
-            %%% LAdr(:,:,ll,kk,jj)=emij(kk,jj)*(Wd.*xx(jj).*Am(kk,ll) + ...
-            %%% squeeze(S(:,:,kk,ll)).*squeeze(u(:,:,jj))-sum(termL1,4)).*dq1d(ll,:,:).*dA;
+for kk = 1:2
+    for jj = 1:2
+        clear termJ termM
+        for ii=1:3
+            termJ(:,:,ii) = squeeze(S(:,:,ii,jj)).*squeeze(du_dx(:,:,ii,kk));
+            termM(:,:,ii) = squeeze(S(:,:,ii,jj)).*squeeze(du_dx(:,:,ii,kk)).*xx(kk);
         end
-
+        JAdr(:,:,kk,jj) =(sum(termJ,3) -Wd.*Am(1,jj)).*squeeze(dq1d(jj,:,:)).*dA;
+        MAdr(:,:,kk,jj) = (sum(termM,3)-Wd.*xx(jj).*Am(kk,jj)).*squeeze(dq1d(jj,:,:)).*dA;
     end
-%%% end
-JAd = sum(JAdr,3);
-MAd = sum(sum(MAdr,4),3); %J/m
-MAd3 = squeeze((sum(MAdr,4))); MAd1=squeeze(MAd3(:,:,1)); MAd2=squeeze(MAd3(:,:,2));
-%%% LAd = sum(sum(sum(LAdr,6),5),4); %J/m
+end
+
+JAd = sum(JAdr,4);
+MAd = sum(MAdr,4); %J/m
 %}
-mid = floor(DataSize(1)/2);
-[a,b] = meshgrid(1:DataSize(1));
-linecon=round(max((abs(a-mid-1/2)),abs(b-mid-1/2)));
 % Summation of integrals
 for ii = 1:mid-1
     areaID = linecon>=(ii-floor(celw/2)) & linecon<=(ii+floor(celw/2));
-    M.Raw(ii) = sum(sum(MAd.*areaID,'omitnan'),'omitnan');
-    M.Raw1(ii) = sum(sum(MAd1.*areaID,'omitnan'),'omitnan');
-    M.Raw2(ii) = sum(sum(MAd2.*areaID,'omitnan'),'omitnan');
-    J.total_Raw(ii) = sum(sum(JAd.*areaID,'omitnan'),'omitnan');
+    M.Raw(:,ii,:) = sum(sum(MAd.*areaID,'omitnan'),'omitnan');
+    J.vectorial(:,ii,:) = sum(sum(JAd.*areaID,'omitnan'),'omitnan');
 end
 
 % to avoid imaginary number (needs to be solved so the code could work for
 % compressive fields
-J.total_Raw = abs(J.total_Raw(1:oh));
-J.total_true   = round(mean((J.total_Raw(contrs:end))),dic);
-J.total_div    = round(std((J.total_Raw(contrs:end)),1),dic);
+J.vectorial = J.vectorial(:,1:oh);
+J.vectorial_true   = round(mean(J.vectorial(:,contrs:end),2),dic);
+J.vectorial_div    = round(std(J.vectorial(:,contrs:end),1,2),dic);
 
 dic = real(ceil(-log10(nanmean(rmoutliers(M.Raw(contrs:end))))))+2;
 if dic<2;       dic = 2;    end
-M.Raw = abs(M.Raw(1:oh));
-M.true  = round(mean(((M.Raw(contrs:end)))),dic);
-M.div   = round(std(((M.Raw(contrs:end))),1),dic);
-M.Raw1 = abs(M.Raw1(1:oh));
-M.Raw2 = abs(M.Raw2(1:oh));
-M.true1  = round(mean(((M.Raw1(contrs:end)))),dic);
-M.div1   = round(std(((M.Raw2(contrs:end))),1),dic);
-M.true2  = round(mean(((M.Raw2(contrs:end)))),dic);
-M.div2   = round(std(((M.Raw2(contrs:end))),1),dic);
+M.Raw = M.Raw(:,1:oh);
+M.true  = round(mean(M.Raw(:,contrs:end),2),dic);
+M.div   = round(std(M.Raw(:,contrs:end),1,2),dic);
 %
-plot_JM(M,J,Maps.stepsize/saf,Maps.units.xy)
+plot_JM(M,J,Maps.stepsize/saf,Maps.units.xy,'M')
 if isfield(Maps,'SavingD')
     saveas(gcf, [fileparts(Maps.SavingD) '\J_M.fig']);
     saveas(gcf, [fileparts(Maps.SavingD) '\J_M.tif']);  close all
     save([fileparts(Maps.SavingD) '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
 end
 %}
+
+%% L-integral (not correct!, see https://doi.org/10.1007/s00707-014-1152-y
+if exist('U','var')
+    emij=[0,1;-1,0]; %% for
+    for ll=1:2
+        for kk = 1:2
+            for jj = 1:2
+                clear termL
+                for ii=1:3
+                    termL1(:,:,ii) = squeeze(S(:,:,ii,ll)).*squeeze(du_dx(:,:,ii,kk)).*xx(jj);
+                end
+                LAdr(:,:,kk,ll,jj)=(Wd.*xx(jj).*Am(kk,ll) + ...
+                    squeeze(S(:,:,kk,ll)).*squeeze(U(:,:,jj)).*saf-sum(termL1,3))...
+                    .*squeeze(dq1d(ll,:,:)).*dA.*emij(kk,jj);
+            end
+        end
+    end
+    LAd = sum(sum(sum(LAdr,6),5),4); %J/m
+    for ii = 1:mid-1
+        areaID = linecon>=(ii-floor(celw/2)) & linecon<=(ii+floor(celw/2));
+        L.Raw(:,ii,:) = sum(sum(LAd.*areaID,'omitnan'),'omitnan');
+    end
+
+dic = real(ceil(-log10(nanmean(rmoutliers(L.Raw(contrs:end))))))+2;
+if dic<2;       dic = 2;    end
+L.Raw = abs(L.Raw(:,1:oh));
+L.true  = round(mean(L.Raw(:,contrs:end),2),dic);
+L.div   = round(std(L.Raw(:,contrs:end),1,2),dic);
+
+plot_JM(L,J,Maps.stepsize/saf,Maps.units.xy,'L')
+end
 end
 
 
@@ -946,11 +922,11 @@ hold off
 end
 
 %%
-function plot_JM(M, J, stepsize, input_unit)
+function plot_JM(M, J, stepsize, input_unit,LorM)
 Md = M.Raw(:);
 set(0, 'defaultAxesFontSize', 22);
 set(0, 'DefaultLineMarkerSize', 14);
-Contour = (1:length(J.total_Raw)) * stepsize;
+Contour = (1:length(J.vectorial)) * stepsize;
 
 % Create figure and set color order
 fig = figure;
@@ -960,24 +936,29 @@ set(fig, 'defaultAxesColorOrder', [[0 0 0]; [1 0 0]]);
 yyaxis left;
 hold on;
 % plot(Contour, M.Raw, 'k--d', 'MarkerEdgeColor', 'k', 'LineWidth', 4);  % Plot M.MRaw
-plot(Contour, M.Raw1, 'k--o', 'LineWidth', 4, 'MarkerFaceColor','k');  % Plot M.MRaw
-plot(Contour, M.Raw2, 'k--s', 'LineWidth', 4, 'MarkerFaceColor','k');  % Plot M.MRaw
-ylabel('M (J/m)');
-Kd = [M.Raw1(:); M.Raw2(:)];
+plot(Contour, M.Raw(1,:), 'k--o', 'LineWidth', 4, 'MarkerFaceColor','k');  % Plot M.MRaw
+plot(Contour, M.Raw(2,:), 'k--s', 'LineWidth', 4, 'MarkerFaceColor','k');  % Plot M.MRaw
+ylabel([LorM ' (J/m)']);
+Kd = M.Raw(:);
 if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
 hold off;
 
 % Plot J on the right y-axis
-yyaxis right;
-plot(Contour, J.total_Raw, 'r--<', 'MarkerEdgeColor', 'r', 'LineWidth', 1.5, 'MarkerFaceColor', 'r');  % Plot J.JRaw
+yyaxis right; hold on
+plot(Contour, J.vectorial(1,:), 'r-->', 'MarkerEdgeColor', 'r', 'LineWidth', 1.5, 'MarkerFaceColor', 'r');  % Plot J.JRaw
+plot(Contour, J.vectorial(2,:), 'r--<', 'MarkerEdgeColor', 'r', 'LineWidth', 1.5, 'MarkerFaceColor', 'r');  % Plot J.JRaw
+
 ylabel('J (J/m^2)');
-ylim([0 max(J.total_Raw) + min(J.total_Raw) / 4]);
+Kd = J.vectorial(:);
+if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
+hold off
 
 % Update legend to only include M and J
 % legend(['M_{integral} = ' num2str(M.true) ' ± ' num2str(M.div) ' J/m'], ... %N/m
-legend(['M_{1} = ' num2str(M.true1) ' ± ' num2str(M.div1) ' J/m'], ...
-    ['M_{2} = ' num2str(M.true2) ' ± ' num2str(M.div2) ' J/m'], ...
-    ['J_{integral} = ' num2str(J.total_true) ' ± ' num2str(J.total_div) ' J/m^2'], ... %N
+legend([LorM '_{1} = ' num2str(M.true(1)) ' ± ' num2str(M.div(1)) ' J/m'], ...
+    [LorM '_{2} = ' num2str(M.true(2)) ' ± ' num2str(M.div(2)) ' J/m'], ...
+    ['J_{1} = ' num2str(J.vectorial_true(1)) ' ± ' num2str(J.vectorial_div(1)) ' J/m^2'], ... 
+    ['J_{2} = ' num2str(J.vectorial_true(2)) ' ± ' num2str(J.vectorial_div(2)) ' J/m^2'], ...%N
     'location', 'northoutside', 'box', 'off');
 
 % Set figure size and formatting

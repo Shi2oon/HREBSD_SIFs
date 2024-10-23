@@ -5,7 +5,8 @@ clc;clear;close all
 % [J,KI,KII,KIII] = KIII_2D_v2(alldata,Prop); % as desigignated maps
 [K,KI,KII,KIII,J,M,Maps] = M_J_KIII_2D(alldata,Prop);
 % [J,KI,KII,KIII] = KIII_2D(MatProp);         % or just MatProp
-fprintf('Does M = %.2f equals J1 * x1 = %.2f\n', M.true1,J.total_true*Maps.stepsize )
+fprintf('Does M = %.2f equals J1 * x1 = %.2f\n', M.true(1),J.vectorial_true(1)*Maps.stepsize )
+fprintf('Does M = %.2f equals J2 * x2 = %.2f\n', M.true(2),J.vectorial_true(2)*Maps.stepsize )
 
 %% M integral verfication after rotation (KI-III values will change)
     theta = 90;  % Get the current crack angle
