@@ -1,18 +1,19 @@
 % Example, synthetic data
 clc;clear;close all
-[MatProp,~,alldata] = Calibration_2DKIII(1,2,3);
+[Prop,~,alldata] = Calibration_2DKIII(1,2,3);
                
-Prop.E = 210e9; 
-Prop.nu = 0.3;              
-Prop.units.St = 'Pa';
-Prop.units.xy = 'm';
-Prop.stressstat = 'plane_stress';
+% Prop.E = 210e9; 
+% Prop.nu = 0.3;              
+% Prop.units.St = 'Pa';
+% Prop.units.xy = 'm';
+% Prop.stressstat = 'plane_stress';
 
 % [J,KI,KII,KIII] = KIII_2D_v2(alldata,Prop); % as desigignated maps
 [K,KI,KII,KIII,J,M,Maps] = M_J_KIII_2D(alldata,Prop);
 % [J,KI,KII,KIII] = KIII_2D(MatProp);         % or just MatProp
+fprintf('Does M = %.2f equals J1 * x1 = %.2f\n', M.true1,J.total_true*Maps.stepsize )
 
-%% M integral verfication
+%% M integral verfication after rotation (KI-III values will change)
     theta = 90;  % Get the current crack angle
     R = [cosd(theta) sind(theta) 0;  % Create a rotation matrix
          -sind(theta) cosd(theta) 0;
@@ -43,9 +44,6 @@ Prop.stressstat = 'plane_stress';
         RotatedAlldata(idx, 11) = A_rot(3, 2);
         RotatedAlldata(idx, 12) = A_rot(3, 3);
     end
-[~,~,~,~,J,M,Maps] = M_J_KIII_2D(alldata,Prop);
-fprintf('Does M = %.2f',M.true)
 [~,~,~,~,J2,M2] = M_J_KIII_2D(RotatedAlldata,Prop);
-Mverf = J.total_true*Maps.stepsize + J2.total_true*Maps.stepsize;
-M.true
+fprintf('Does M = %.2f equals J2 * x2 = %.2f\n', M2.true1,J2.total_true*Maps.stepsize )
 

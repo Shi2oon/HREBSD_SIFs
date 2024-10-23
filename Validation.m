@@ -1,12 +1,6 @@
 % Example, synthetic data
 clc;clear;close all
-[MatProp,~,alldata] = Calibration_2DKIII(1,2,3);
-               
-Prop.E = 210e9; 
-Prop.nu = 0.3;              
-Prop.units.St = 'Pa';
-Prop.units.xy = 'm';
-Prop.stressstat = 'plane_stress';
+[Prop,~,alldata] = Calibration_2DKIII(1,2,3);
 
 % [J,KI,KII,KIII] = KIII_2D_v2(alldata,Prop); % as desigignated maps
 [K,KI,KII,KIII,J,M,Maps] = M_J_KIII_2D(alldata,Prop);
