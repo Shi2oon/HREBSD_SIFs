@@ -336,6 +336,7 @@ end
 %}
 
 %% L-integral (not correct!, see https://doi.org/10.1007/s00707-014-1152-y
+%{
 if exist('U','var')
     emij=[0,1;-1,0]; %% for
     for ll=1:2
@@ -365,6 +366,7 @@ L.div   = round(std(L.Raw(:,contrs:end),1,2),dic);
 
 plot_JM(L,J,Maps.stepsize/saf,Maps.units.xy,'L')
 end
+%}
 end
 
 
