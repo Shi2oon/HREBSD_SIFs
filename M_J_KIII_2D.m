@@ -169,7 +169,7 @@ Wd = 0.5*(E(:,:,1,1,:).*S(:,:,1,1,:) + E(:,:,1,2,:).*S(:,:,1,2,:) + E(:,:,1,3,:)
     + E(:,:,2,1,:).*S(:,:,2,1,:) + E(:,:,2,2,:).*S(:,:,2,2,:) + E(:,:,2,3,:).*S(:,:,2,3,:)...
     + E(:,:,3,1,:).*S(:,:,3,1,:) + E(:,:,3,2,:).*S(:,:,3,2,:) + E(:,:,3,3,:).*S(:,:,3,3,:));
 Wd = squeeze(Wd);
-%{
+%
 % Decomposed Plots
 plot_DecomposeddU(du_dx,Maps);
 if isfield(Maps,'SavingD')
@@ -365,6 +365,11 @@ L.true  = round(mean(L.Raw(:,contrs:end),2),dic);
 L.div   = round(std(L.Raw(:,contrs:end),1,2),dic);
 
 plot_JM(L,J,Maps.stepsize/saf,Maps.units.xy,'L')
+if isfield(Maps,'SavingD')
+    saveas(gcf, [fileparts(Maps.SavingD) '\J_L.fig']);
+    saveas(gcf, [fileparts(Maps.SavingD) '\J_L.tif']);  close all
+    save([fileparts(Maps.SavingD) '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
+end
 end
 %}
 end
