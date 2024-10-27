@@ -943,7 +943,7 @@ set(fig, 'defaultAxesColorOrder', [[0 0 0]; [1 0 0]]);
 yyaxis left;
 hold on;
 % plot(Contour, M.Raw, 'k--d', 'MarkerEdgeColor', 'k', 'LineWidth', 4);  % Plot M.MRaw
-plot(Contour, M.Raw(1,:), 'k--o', 'LineWidth', 4, 'MarkerFaceColor','k');  % Plot M.MRaw
+plot(Contour, M.Raw(1,:), 'k--o', 'LineWidth', 4);  % Plot M.MRaw
 plot(Contour, M.Raw(2,:), 'k--s', 'LineWidth', 4, 'MarkerFaceColor','k');  % Plot M.MRaw
 ylabel([LorM ' (J/m)']);
 Kd = M.Raw(:);
@@ -953,7 +953,7 @@ hold off;
 % Plot J on the right y-axis
 yyaxis right; hold on
 plot(Contour, J.vectorial(1,:), 'r-->', 'MarkerEdgeColor', 'r', 'LineWidth', 1.5, 'MarkerFaceColor', 'r');  % Plot J.JRaw
-plot(Contour, J.vectorial(2,:), 'r--<', 'MarkerEdgeColor', 'r', 'LineWidth', 1.5, 'MarkerFaceColor', 'r');  % Plot J.JRaw
+plot(Contour, J.vectorial(2,:), 'r--d', 'MarkerEdgeColor', 'r', 'LineWidth', 1.5);  % Plot J.JRaw
 
 ylabel('J (J/m^2)');
 Kd = J.vectorial(:);
