@@ -156,10 +156,10 @@ switch Maps.units.xy
     case 'nm'
         saf = 1e-9;
 end
+
+Maps.stepsize = unique(round(diff(unique(Maps.Y(:))),4))*saf;
 Maps.X = Maps.X*saf;
 Maps.Y = Maps.Y*saf;
-
-Maps.stepsize = unique(round(diff(unique(Maps.Y(:))),4));
 Maps.units.St = 'Pa';        Maps.units.xy = 'um';
 DataSize = [size(Maps.du11),1];
 
@@ -235,7 +235,7 @@ end
 %% Equivalent SIF
 % to avoid imaginary number (needs to be solved so the code could work for
 % compressive fields
-J.Raw = J.Raw;
+J.Raw = abs(J.Raw);
 J.KRaw(1:2,:) = sqrt(J.Raw(1:2,:)*Maps.E);
 J.KRaw(3,:) = sqrt(J.Raw(3,:)*2*Maps.G);      % Mode III
 J.JRaw = J.Raw;
