@@ -3,16 +3,10 @@ function [Maps,M4,alldata] = Calibration_2DKIII(KI,KII,KIII)
 %% Input
               close all                   
 % Domain size (square, crack tip at centre).
-Maps.Mat          = 'Calibration';
 Maps.type         = 'E';    
-Maps.units.xy     = 'mm';  % meter (m) or milmeter (mm) or micrometer(um);
-Maps.units.S      = 'Pa';      
+Maps.units.xy     = 'mm';  % meter (m) or milmeter (mm) or micrometer(um);  
 Maps.units.St     = 'Pa'; 
-Maps.pixel_size   = 1;           % if DIC values are in pixel, 1 if in physical units;
-Maps.Dim          = '3D';        % handles  2D and 3D data with option
-Maps.Operation    = 'xED';       % Strain, xED = xEBSD, DIC = Displacement
 Maps.stressstat   = 'plane_stress'; % 'plane_stress' OR 'plane_strain'
-Maps.unique       = 'Calibration';
 sz = 50;
 
 switch Maps.units.xy

@@ -1,4 +1,4 @@
-function [K,KI,KII,KIII,J,M,Maps] = M_J_KIII_2D(alldata,MatProp)
+function [K,KI,KII,KIII,J,M,Maps] = M_J_KIII_2D(alldata,MatProp,loopedJ)
 close all;
 
 % This code decompose the Stress intesity factors from strain maps
@@ -169,7 +169,7 @@ Wd = 0.5*(E(:,:,1,1,:).*S(:,:,1,1,:) + E(:,:,1,2,:).*S(:,:,1,2,:) + E(:,:,1,3,:)
     + E(:,:,2,1,:).*S(:,:,2,1,:) + E(:,:,2,2,:).*S(:,:,2,2,:) + E(:,:,2,3,:).*S(:,:,2,3,:)...
     + E(:,:,3,1,:).*S(:,:,3,1,:) + E(:,:,3,2,:).*S(:,:,3,2,:) + E(:,:,3,3,:).*S(:,:,3,3,:));
 Wd = squeeze(Wd);
-%
+%{
 % Decomposed Plots
 plot_DecomposeddU(du_dx,Maps);
 if isfield(Maps,'SavingD')
@@ -218,9 +218,9 @@ for jj = 1:2
     for ii=1:3
         termJ(:,:,:,ii) = squeeze(S(:,:,ii,jj,:)).*squeeze(du_dx(:,:,ii,1,:));
     end
-    JAdr(:,:,:,jj) =(sum(termJ,4) -Wd.*Am(1,jj)).*squeeze(dq1d(jj,:,:)).*dA;
+    JAdr(:,:,:,jj) =(sum(termJ,4,'omitnan') -Wd.*Am(1,jj)).*squeeze(dq1d(jj,:,:)).*dA;
 end
-JAd = sum(JAdr,4);
+JAd = sum(JAdr,4,'omitnan');
 %}
 % Contour selection
 mid = floor(DataSize(1)/2);
@@ -239,15 +239,19 @@ J.Raw = abs(J.Raw);
 J.KRaw(1:2,:) = sqrt(J.Raw(1:2,:)*Maps.E);
 J.KRaw(3,:) = sqrt(J.Raw(3,:)*2*Maps.G);      % Mode III
 J.JRaw = J.Raw;
-J.Raw = sum(J.Raw);
+J.Raw = sum(J.Raw,'omitnan');
 %
 %%
+if exist('loopedJ','var')
+    oh = loopedJ;
+else
 figure; plot(J.Raw); legend('J')%trim acess
 set(gcf,'position',[98 311 1481 667])
 text(1:length(J.Raw),J.Raw,string([1:length(J.Raw)]))
-%}
 pause(0.1)
+%}
 oh = input('where to cut the contour? '); close
+end
 
 %%
 J.Raw    = J.Raw(1:oh);
@@ -300,13 +304,13 @@ for kk = 1:2
             termJ(:,:,ii) = squeeze(S(:,:,ii,jj)).*squeeze(du_dx(:,:,ii,kk));
             termM(:,:,ii) = squeeze(S(:,:,ii,jj)).*squeeze(du_dx(:,:,ii,kk)).*xx(kk);
         end
-        JAdr(:,:,kk,jj) =(sum(termJ,3) -Wd.*Am(1,jj)).*squeeze(dq1d(jj,:,:)).*dA;
-        MAdr(:,:,kk,jj) = (sum(termM,3)-Wd.*xx(jj).*Am(kk,jj)).*squeeze(dq1d(jj,:,:)).*dA;
+        JAdr(:,:,kk,jj) =(sum(termJ,3,'omitnan') -Wd.*Am(1,jj)).*squeeze(dq1d(jj,:,:)).*dA;
+        MAdr(:,:,kk,jj) = (sum(termM,3,'omitnan')-Wd.*xx(jj).*Am(kk,jj)).*squeeze(dq1d(jj,:,:)).*dA;
     end
 end
 
-JAd = sum(JAdr,4);
-MAd = sum(MAdr,4); %J/m
+JAd = sum(JAdr,4,'omitnan');
+MAd = sum(MAdr,4,'omitnan'); %J/m
 %}
 % Summation of integrals
 for ii = 1:mid-1
@@ -347,12 +351,12 @@ if exist('U','var')
                     termL1(:,:,ii) = squeeze(S(:,:,ii,ll)).*squeeze(du_dx(:,:,ii,kk)).*xx(jj);
                 end
                 LAdr(:,:,kk,ll,jj)=(Wd.*xx(jj).*Am(kk,ll) + ...
-                    squeeze(S(:,:,kk,ll)).*squeeze(U(:,:,jj)).*saf-sum(termL1,3))...
+                    squeeze(S(:,:,kk,ll)).*squeeze(U(:,:,jj)).*saf-sum(termL1,3,'omitnan'))...
                     .*squeeze(dq1d(ll,:,:)).*dA.*emij(kk,jj);
             end
         end
     end
-    LAd = sum(sum(sum(LAdr,6),5),4); %J/m
+    LAd = sum(sum(sum(LAdr,6,'omitnan'),5,'omitnan'),4,'omitnan'); %J/m
     for ii = 1:mid-1
         areaID = linecon>=(ii-floor(celw/2)) & linecon<=(ii+floor(celw/2));
         L.Raw(:,ii,:) = sum(sum(LAd.*areaID,'omitnan'),'omitnan');
@@ -537,15 +541,15 @@ du33 = raw_data(:,12);
 
 [dataum.X,dataum.Y,dataum.Z] = meshgrid(xVec,yVec,zVec);
 [nRows, nCols , nDep] = size(dataum.X);
-dataum.du11 = zeros(nRows, nCols, nDep); %Initialise
-dataum.du12 = zeros(nRows, nCols, nDep); %Initialise
-dataum.du13 = zeros(nRows, nCols, nDep); %Initialise
-dataum.du21 = zeros(nRows, nCols, nDep); %Initialise
-dataum.du22 = zeros(nRows, nCols, nDep); %Initialise
-dataum.du23 = zeros(nRows, nCols, nDep); %Initialise
-dataum.du31 = zeros(nRows, nCols, nDep); %Initialise
-dataum.du32 = zeros(nRows, nCols, nDep); %Initialise
-dataum.du33 = zeros(nRows, nCols, nDep); %Initialise
+dataum.du11 = NaN(nRows, nCols, nDep); %Initialise
+dataum.du12 = NaN(nRows, nCols, nDep); %Initialise
+dataum.du13 = NaN(nRows, nCols, nDep); %Initialise
+dataum.du21 = NaN(nRows, nCols, nDep); %Initialise
+dataum.du22 = NaN(nRows, nCols, nDep); %Initialise
+dataum.du23 = NaN(nRows, nCols, nDep); %Initialise
+dataum.du31 = NaN(nRows, nCols, nDep); %Initialise
+dataum.du32 = NaN(nRows, nCols, nDep); %Initialise
+dataum.du33 = NaN(nRows, nCols, nDep); %Initialise
 
 for iRow = 1:nRows % loop rows
     for iCol = 1:nCols % loop cols
@@ -694,7 +698,7 @@ iV=0;   Mo = {'I','II','III'}; KK = {'x','y','z'};
 for ii=1:3
     for ij=1:3
         eval(sprintf('pD = Maps.du%d%d;',ii,ij));
-        if ~sum(pD(:)) == 0
+        if ~sum(pD(:),'omitnan') == 0
             iV= iV+1;
             s{iV}=subplot(9,3,iV);
             pcolor(Maps.X,Maps.Y,pD); clear pD
@@ -708,7 +712,7 @@ for iO =1:3
     for ii=1:3
         for ij=1:3
             pD = squeeze(du_dx(:,:,ii,ij,iO));
-            if ~sum(pD(:)) == 0
+            if ~sum(pD(:),'omitnan') == 0
                 iV= iV+1;
                 s{iV}=subplot(9,3,iV);
                 pcolor(Maps.X,Maps.Y,pD); clear pD
