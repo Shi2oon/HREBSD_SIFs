@@ -10,6 +10,8 @@ There are couple of input desks depending on what you want:
 * input_desk_xEBSD: for HR-EBSD data genereated using xEBSD code. for CrossCourt you will need to do the data prepreation yourself, but look to the other inptu desk to see what the format should be and how it is arranged. There is an example data, "Crack_in_Si_XEBSD" but you will need to add  "GetGrainData" to your directory
 * Direction_Sweep: this input desk when you want to find the maximum energy direction as the KI-II-II, J and M are claculated from -90 to 90 degrees.
 
+The most critical thing for the code to work is that your data need to be square (number of data in X need to equal number of data in Y) and the discretisation of the data need to be unifrom, i.e., equal spacing
+
 % for this function to work properly, spacing between potins in x and y
 % should be the same and the crack should be at the centre (this can be
 % done inside this fucntion also)
