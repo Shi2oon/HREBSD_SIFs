@@ -1,10 +1,14 @@
-# KIII_from_Strain
-KIII_2D_v2.m
-This code decompose the Stress intesity factors from strain maps directly without the need for integration
+KIII_2D_v2: This code decompose the Stress intesity factors from strain maps directly without the need for integration
 Start with generating strain data using the calibration code and then use the output for the main function
 The code is self contained and does not need extra functions
 
-There are two input desks for 2D/3D DIC data and HR-EBSD data
+M_J_KIII_2D: Calucate the M integral in horizontal and vertical direction. Under development is the L-integral
+
+There are couple of input desks depending on what you want:
+* input_desk_Validation: for valdiating the code. It is connected to the "Calibration_2DKIII" function which creates a synthatic field based on the KI-II-III input.
+* input_desk_DIC: for 2D and stereo-DIC data
+* input_desk_xEBSD: for HR-EBSD data genereated using xEBSD code. for CrossCourt you will need to do the data prepreation yourself, but look to the other inptu desk to see what the format should be and how it is arranged. There is an example data, "Crack_in_Si_XEBSD" but you will need to add  "GetGrainData" to your directory
+* Direction_Sweep: this input desk when you want to find the maximum energy direction as the KI-II-II, J and M are claculated from -90 to 90 degrees.
 
 % for this function to work properly, spacing between potins in x and y
 % should be the same and the crack should be at the centre (this can be

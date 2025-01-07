@@ -1,6 +1,5 @@
 function [Maps,alldata]=GetGrainData(fname,Named)
 % file name is fname
-addpath([pwd '\Get_HREBSD_Data'])
 %% load data
 if exist('Named','var') == 0
     [~,Named] = fileparts(fname);

@@ -1,4 +1,4 @@
-function [K,KI,KII,KIII,J,M,Maps] = M_J_KIII_2D(alldata,MatProp,loopedJ)
+function [J,K,KI,KII,KIII,Maps] = KIII_2D_v2(alldata,MatProp)
 close all;
 
 % This code decompose the Stress intesity factors from strain maps
@@ -42,33 +42,7 @@ close all;
 
 % look to the strrcutrure of each variable to see the differance
 
-if isfield(MatProp,'Operation')
-    if strcmpi(MatProp.Operation, 'DIC')
-        [~,RawData ] = reshapeData(alldata);
-        stepsize = unique(round(diff(unique(RawData.Y1(:))),4));
-        [RawData.E11,RawData.E12,RawData.E13] = crackgradient(RawData.Ux,stepsize);
-        [RawData.E21,RawData.E22,RawData.E23] = crackgradient(RawData.Uy,stepsize);
-        U (:,:,1) = RawData.Ux;        U (:,:,2) = RawData.Uy;
-
-        if size(alldata,2)==6
-            [RawData.E31,RawData.E32,RawData.E33] = crackgradient(RawData.Uz,stepsize);
-
-            alldata = [RawData.X1(:) RawData.Y1(:) zeros(size(RawData.Y1(:))) ...
-                RawData.E11(:) RawData.E12(:) RawData.E13(:) ...
-                RawData.E21(:) RawData.E22(:) RawData.E23(:) ...
-                RawData.E31(:) RawData.E32(:) RawData.E33(:)];
-            U (:,:,3) = RawData.Uz;
-        else
-            alldata = [RawData.X1(:) RawData.Y1(:) zeros(size(RawData.Y1(:))) ...
-                RawData.E11(:) RawData.E12(:) zeros(size(RawData.Y1(:)))...
-                RawData.E21(:) RawData.E22(:) zeros(size(RawData.Y1(:))) ...
-                zeros(size(RawData.Y1(:))) zeros(size(RawData.Y1(:))) zeros(size(RawData.Y1(:)))];
-        end
-
-    end
-end
-
-if size(alldata,2) == 5 % 2D deformation gradient data
+if size(alldata,2) == 5 % 2D data
     alldata = [alldata(:,1) alldata(:,2) zeros(size(alldata(:,2))) ...
         alldata(:,3) alldata(:,5) zeros(size(alldata(:,2))) ...
         alldata(:,5) alldata(:,4) zeros(size(alldata(:,2))) ...
@@ -104,7 +78,7 @@ quest            = 'Do you want to Crop and Centre the Crack tip';
 answer           = questdlg(quest,'Boundary Condition','Y','N', opts);
 if strcmpi(answer,'Y') % crop data
     [Crop] = CroppingEqually(Maps);
-    Maps.X    = Crop.X;      Maps.Y   = Crop.Y;        Maps.Z   = Crop.Z;
+    Maps.X   = Crop.X;      Maps.Y   = Crop.Y;        Maps.Z   = Crop.Z;
     Maps.du11 = Crop.du11;  Maps.du12 = Crop.du12;    Maps.du13 = Crop.du13;
     Maps.du21 = Crop.du21;  Maps.du22 = Crop.du22;    Maps.du23 = Crop.du23;
     Maps.du31 = Crop.du31;  Maps.du32 = Crop.du32;    Maps.du33 = Crop.du33;
@@ -143,9 +117,10 @@ else
     Maps.E = Maps.E*Saf;
     Maps.G = Maps.E/(2*(1 + Maps.nu));
     if strcmpi(Maps.stressstat,'plane_strain')
-        Maps.E = Maps.E/(1-Maps.nu^2);% for HR-EBSD plane stress conditions
+        Maps.E = Maps.E/(1-Maps.nu^2);% for HR-EBSD plane strain conditions
     end
 end
+
 switch Maps.units.xy
     case 'm'
         saf = 1;
@@ -156,10 +131,8 @@ switch Maps.units.xy
     case 'nm'
         saf = 1e-9;
 end
-
-Maps.stepsize = unique(round(diff(unique(Maps.Y(:))),4))*saf;
-Maps.X = Maps.X*saf;
-Maps.Y = Maps.Y*saf;
+try;    Maps.stepsize = Maps.stepsize*saf;
+catch;  Maps.stepsize = unique(round(diff(unique(Maps.Y(:))),4))*saf; end
 Maps.units.St = 'Pa';        Maps.units.xy = 'um';
 DataSize = [size(Maps.du11),1];
 
@@ -168,8 +141,7 @@ DataSize = [size(Maps.du11),1];
 Wd = 0.5*(E(:,:,1,1,:).*S(:,:,1,1,:) + E(:,:,1,2,:).*S(:,:,1,2,:) + E(:,:,1,3,:).*S(:,:,1,3,:)...
     + E(:,:,2,1,:).*S(:,:,2,1,:) + E(:,:,2,2,:).*S(:,:,2,2,:) + E(:,:,2,3,:).*S(:,:,2,3,:)...
     + E(:,:,3,1,:).*S(:,:,3,1,:) + E(:,:,3,2,:).*S(:,:,3,2,:) + E(:,:,3,3,:).*S(:,:,3,3,:));
-Wd = squeeze(Wd);
-%{
+%
 % Decomposed Plots
 plot_DecomposeddU(du_dx,Maps);
 if isfield(Maps,'SavingD')
@@ -211,17 +183,11 @@ dQdY = dQdX';
 dQdX(dQdX.*dQdY~=0) = 0;
 % Domain integral
 dA = ones(DataSize).*Maps.stepsize^2;
-dq1d(1,:,:) = dQdX;  dq1d(2,:,:) = dQdY;
-Am = [1,0; 0, 1];
 
-for jj = 1:2
-    for ii=1:3
-        termJ(:,:,:,ii) = squeeze(S(:,:,ii,jj,:)).*squeeze(du_dx(:,:,ii,1,:));
-    end
-    JAdr(:,:,:,jj) =(sum(termJ,4,'omitnan') -Wd.*Am(1,jj)).*squeeze(dq1d(jj,:,:)).*dA;
-end
-JAd = sum(JAdr,4,'omitnan');
-%}
+JAd = ((S(:,:,1,1,:).*du_dx(:,:,1,1,:) + S(:,:,1,2,:).*du_dx(:,:,2,1,:)+...
+    S(:,:,1,3,:).*du_dx(:,:,3,1,:) - Wd).*dQdX +  (S(:,:,2,2,:).*...
+    du_dx(:,:,2,1,:) +S(:,:,1,2,:).*du_dx(:,:,1,1,:)+...
+    S(:,:,2,3,:).*du_dx(:,:,3,1,:)).*dQdY).*dA;
 % Contour selection
 mid = floor(DataSize(1)/2);
 [a,b] = meshgrid(1:DataSize(1));
@@ -239,19 +205,15 @@ J.Raw = abs(J.Raw);
 J.KRaw(1:2,:) = sqrt(J.Raw(1:2,:)*Maps.E);
 J.KRaw(3,:) = sqrt(J.Raw(3,:)*2*Maps.G);      % Mode III
 J.JRaw = J.Raw;
-J.Raw = sum(J.Raw,'omitnan');
+J.Raw = sum(J.Raw);
 %
 %%
-if exist('loopedJ','var')
-    oh = loopedJ;
-else
 figure; plot(J.Raw); legend('J')%trim acess
 set(gcf,'position',[98 311 1481 667])
 text(1:length(J.Raw),J.Raw,string([1:length(J.Raw)]))
-pause(0.1)
 %}
+pause(0.1)
 oh = input('where to cut the contour? '); close
-end
 
 %%
 J.Raw    = J.Raw(1:oh);
@@ -264,17 +226,17 @@ KIII.Raw = J.KRaw(3,:)*1e-6;
 contrs   = length(J.Raw);        contrs = contrs - round(contrs*0.4);
 dic = real(ceil(-log10(nanmean(rmoutliers(J.Raw(contrs:end))))))+2;
 if dic<2;       dic = 2;    end
-J.true   = round(mean(J.Raw(contrs:end)),dic);
-J.div    = round(std(J.Raw(contrs:end),1),dic);
-KI.true  = round(mean(KI.Raw(contrs:end)),dic);
-KI.div   = round(std(KI.Raw(contrs:end),1),dic);
-KII.true = round(mean(KII.Raw(contrs:end)),dic);
-KII.div  = round(std(KII.Raw(contrs:end),1),dic);
-KIII.true= round(mean(KIII.Raw(contrs:end)),dic);
-KIII.div = round(std(KIII.Raw(contrs:end),1),dic);
+J.true   = round(mean((J.Raw(contrs:end))),dic);
+J.div    = round(std((J.Raw(contrs:end)),1),dic);
+KI.true  = round(mean(((KI.Raw(contrs:end)))),dic);
+KI.div   = round(std(((KI.Raw(contrs:end))),1),dic);
+KII.true = round(mean(((KII.Raw(contrs:end)))),dic);
+KII.div  = round(std(((KII.Raw(contrs:end))),1),dic);
+KIII.true= round(mean(((KIII.Raw(contrs:end)))),dic);
+KIII.div = round(std(((KIII.Raw(contrs:end))),1),dic);
 K.Raw    = sqrt(J.Raw*Maps.E)*1e-6;
-K.true   = round(mean(K.Raw(contrs:end)),dic);
-K.div    = round(std(K.Raw(contrs:end),1),dic);
+K.true   = round(mean(((K.Raw(contrs:end)))),dic);
+K.div    = round(std(((K.Raw(contrs:end))),1),dic);
 %
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
@@ -283,103 +245,9 @@ if isfield(Maps,'SavingD')
     save([fileparts(Maps.SavingD) '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps');
 end
 %}
-
-%% undecomposed M and J integrals
-%% Wd.
-clear JAdr MAdr E S du_dx Wd
-[du_dx,E,S] = DU(Maps);
-Wd = 0.5*(E(:,:,1,1).*S(:,:,1,1) + E(:,:,1,2).*S(:,:,1,2) + E(:,:,1,3).*S(:,:,1,3)...
-    + E(:,:,2,1).*S(:,:,2,1) + E(:,:,2,2).*S(:,:,2,2) + E(:,:,2,3).*S(:,:,2,3)...
-    + E(:,:,3,1).*S(:,:,3,1) + E(:,:,3,2).*S(:,:,3,2) + E(:,:,3,3).*S(:,:,3,3));
-Wd = squeeze(Wd);
-%}
-%% M-integral
-% displacement field measurement, FFEMS (2012), 35, ?971-984
-% Displacement gradient
-xx = [Maps.stepsize Maps.stepsize];
-for kk = 1:2
-    for jj = 1:2
-        clear termJ termM
-        for ii=1:3
-            termJ(:,:,ii) = squeeze(S(:,:,ii,jj)).*squeeze(du_dx(:,:,ii,kk));
-            termM(:,:,ii) = squeeze(S(:,:,ii,jj)).*squeeze(du_dx(:,:,ii,kk)).*xx(kk);
-        end
-        JAdr(:,:,kk,jj) =(sum(termJ,3,'omitnan') -Wd.*Am(1,jj)).*squeeze(dq1d(jj,:,:)).*dA;
-        MAdr(:,:,kk,jj) = (sum(termM,3,'omitnan')-Wd.*xx(jj).*Am(kk,jj)).*squeeze(dq1d(jj,:,:)).*dA;
-    end
 end
 
-JAd = sum(JAdr,4,'omitnan');
-MAd = sum(MAdr,4,'omitnan'); %J/m
-%}
-% Summation of integrals
-for ii = 1:mid-1
-    areaID = linecon>=(ii-floor(celw/2)) & linecon<=(ii+floor(celw/2));
-    M.Raw(:,ii,:) = sum(sum(MAd.*areaID,'omitnan'),'omitnan');
-    J.vectorial(:,ii,:) = sum(sum(JAd.*areaID,'omitnan'),'omitnan');
-end
-
-% to avoid imaginary number (needs to be solved so the code could work for
-% compressive fields
-J.vectorial = J.vectorial(:,1:oh);
-J.vectorial_true   = round(mean(J.vectorial(:,contrs:end),2),dic);
-J.vectorial_div    = round(std(J.vectorial(:,contrs:end),1,2),dic);
-
-dic = real(ceil(-log10(nanmean(rmoutliers(M.Raw(contrs:end))))))+2;
-if dic<2;       dic = 2;    end
-M.Raw = M.Raw(:,1:oh);
-M.true  = round(mean(M.Raw(:,contrs:end),2),dic);
-M.div   = round(std(M.Raw(:,contrs:end),1,2),dic);
-%
-plot_JM(M,J,Maps.stepsize/saf,Maps.units.xy,'M')
-if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_M.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_M.tif']);  close all
-    save([fileparts(Maps.SavingD) '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
-end
-%}
-
-%% L-integral (not correct!, see https://doi.org/10.1007/s00707-014-1152-y
-%{
-if exist('U','var')
-    emij=[0,1;-1,0]; %% for
-    for ll=1:2
-        for kk = 1:2
-            for jj = 1:2
-                clear termL
-                for ii=1:3
-                    termL1(:,:,ii) = squeeze(S(:,:,ii,ll)).*squeeze(du_dx(:,:,ii,kk)).*xx(jj);
-                end
-                LAdr(:,:,kk,ll,jj)=(Wd.*xx(jj).*Am(kk,ll) + ...
-                    squeeze(S(:,:,kk,ll)).*squeeze(U(:,:,jj)).*saf-sum(termL1,3,'omitnan'))...
-                    .*squeeze(dq1d(ll,:,:)).*dA.*emij(kk,jj);
-            end
-        end
-    end
-    LAd = sum(sum(sum(LAdr,6,'omitnan'),5,'omitnan'),4,'omitnan'); %J/m
-    for ii = 1:mid-1
-        areaID = linecon>=(ii-floor(celw/2)) & linecon<=(ii+floor(celw/2));
-        L.Raw(:,ii,:) = sum(sum(LAd.*areaID,'omitnan'),'omitnan');
-    end
-
-dic = real(ceil(-log10(nanmean(rmoutliers(L.Raw(contrs:end))))))+2;
-if dic<2;       dic = 2;    end
-L.Raw = abs(L.Raw(:,1:oh));
-L.true  = round(mean(L.Raw(:,contrs:end),2),dic);
-L.div   = round(std(L.Raw(:,contrs:end),1,2),dic);
-
-plot_JM(L,J,Maps.stepsize/saf,Maps.units.xy,'L')
-if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_L.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_L.tif']);  close all
-    save([fileparts(Maps.SavingD) '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
-end
-end
-%}
-end
-
-
-%% sub-functions
+%%
 function [du_dx,De_E,De_S] = decomposeDU(Maps)
 for iV=1:3
     for xi=1:3
@@ -427,14 +295,14 @@ du_dx(:,:,3,1,3) = 0.5*(squeeze(A(:,:,3,1)) - flipud(squeeze(A(:,:,3,1))));
 du_dx(:,:,3,2,3) = 0.5*(squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
 du_dx(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
 %
-% strain from displacement gradient
-for i=1:3
-    for j=1:3
-        for M=1:3
-            De_E(:,:,i,j,M) = 0.5*(du_dx(:,:,i,j,M)+du_dx(:,:,j,i,M));
+    % strain from displacement gradient
+    for i=1:3
+        for j=1:3
+            for M=1:3
+                De_E(:,:,i,j,M) = 0.5*(du_dx(:,:,i,j,M)+du_dx(:,:,j,i,M));
+            end
         end
     end
-end
 
 %%
 if ~isfield(Maps,'Stiffness') % linear istropic material
@@ -474,52 +342,6 @@ end
 end
 
 %%
-function [A, De_E, De_S] = DU(Maps)
-for iV = 1:3
-    for xi = 1:3
-        eval(sprintf('A(:,:,iV,xi) = Maps.du%d%d;', iV, xi));  % Assuming Maps.E11, Maps.E12, etc.
-    end
-end
-
-% Strain from displacement gradient
-for i = 1:3
-    for j = 1:3
-        De_E(:,:,i,j) = 0.5 * (A(:,:,i,j) + A(:,:,j,i));
-    end
-end
-
-%% Stress Tensor Calculation
-if ~isfield(Maps, 'Stiffness') % linear isotropic material
-    % Cauchy stress tensor, assuming linear-elastic, isotropic material
-    De_S(:,:,1,1) = Maps.E / (1 - Maps.nu^2) * (De_E(:,:,1,1) + Maps.nu * (De_E(:,:,2,2) + De_E(:,:,3,3)));
-    De_S(:,:,2,2) = Maps.E / (1 - Maps.nu^2) * (De_E(:,:,2,2) + Maps.nu * (De_E(:,:,1,1) + De_E(:,:,3,3)));
-    De_S(:,:,3,3) = Maps.E / (1 - Maps.nu^2) * (De_E(:,:,3,3) + Maps.nu * (De_E(:,:,1,1) + De_E(:,:,2,2)));
-    De_S(:,:,1,2) = Maps.G * (De_E(:,:,1,2) + De_E(:,:,2,1));
-    De_S(:,:,2,1) = De_S(:,:,1,2);
-    De_S(:,:,1,3) = Maps.G * (De_E(:,:,1,3) + De_E(:,:,3,1));
-    De_S(:,:,3,1) = De_S(:,:,1,3);
-    De_S(:,:,2,3) = Maps.G * (De_E(:,:,2,3) + De_E(:,:,3,2));
-    De_S(:,:,3,2) = De_S(:,:,2,3);
-else % anisotropic material
-    for yi = 1:size(A, 1)
-        for xi = 1:size(A, 2)
-            e_voight = [De_E(yi, xi, 1, 1); De_E(yi, xi, 2, 2); De_E(yi, xi, 3, 3); ...
-                De_E(yi, xi, 1, 2) + De_E(yi, xi, 2, 1); ...
-                De_E(yi, xi, 1, 3) + De_E(yi, xi, 3, 1); ...
-                De_E(yi, xi, 2, 3) + De_E(yi, xi, 3, 2)];
-            s_voight = Maps.Stiffness * e_voight;
-            De_S(yi, xi, :, :) = [s_voight(1), s_voight(4), s_voight(5); ...
-                s_voight(4), s_voight(2), s_voight(6); ...
-                s_voight(5), s_voight(6), s_voight(3)];
-            De_E(yi, xi, :, :) = [e_voight(1), e_voight(4)/2, e_voight(5)/2; ...
-                e_voight(4)/2, e_voight(2), e_voight(6)/2; ...
-                e_voight(5)/2, e_voight(6)/2, e_voight(3)];
-        end
-    end
-end
-end
-
-%%
 function [ alldata,dataum ] = reshapeDefromationGradient( raw_data )
 %PROCESS_DATA Summary of this function goes here
 %   Detailed explanation goes here
@@ -541,15 +363,15 @@ du33 = raw_data(:,12);
 
 [dataum.X,dataum.Y,dataum.Z] = meshgrid(xVec,yVec,zVec);
 [nRows, nCols , nDep] = size(dataum.X);
-dataum.du11 = NaN(nRows, nCols, nDep); %Initialise
-dataum.du12 = NaN(nRows, nCols, nDep); %Initialise
-dataum.du13 = NaN(nRows, nCols, nDep); %Initialise
-dataum.du21 = NaN(nRows, nCols, nDep); %Initialise
-dataum.du22 = NaN(nRows, nCols, nDep); %Initialise
-dataum.du23 = NaN(nRows, nCols, nDep); %Initialise
-dataum.du31 = NaN(nRows, nCols, nDep); %Initialise
-dataum.du32 = NaN(nRows, nCols, nDep); %Initialise
-dataum.du33 = NaN(nRows, nCols, nDep); %Initialise
+dataum.du11 = zeros(nRows, nCols, nDep); %Initialise
+dataum.du12 = zeros(nRows, nCols, nDep); %Initialise
+dataum.du13 = zeros(nRows, nCols, nDep); %Initialise
+dataum.du21 = zeros(nRows, nCols, nDep); %Initialise
+dataum.du22 = zeros(nRows, nCols, nDep); %Initialise
+dataum.du23 = zeros(nRows, nCols, nDep); %Initialise
+dataum.du31 = zeros(nRows, nCols, nDep); %Initialise
+dataum.du32 = zeros(nRows, nCols, nDep); %Initialise
+dataum.du33 = zeros(nRows, nCols, nDep); %Initialise
 
 for iRow = 1:nRows % loop rows
     for iCol = 1:nCols % loop cols
@@ -698,7 +520,7 @@ iV=0;   Mo = {'I','II','III'}; KK = {'x','y','z'};
 for ii=1:3
     for ij=1:3
         eval(sprintf('pD = Maps.du%d%d;',ii,ij));
-        if ~sum(pD(:),'omitnan') == 0
+        if ~sum(pD(:)) == 0
             iV= iV+1;
             s{iV}=subplot(9,3,iV);
             pcolor(Maps.X,Maps.Y,pD); clear pD
@@ -712,7 +534,7 @@ for iO =1:3
     for ii=1:3
         for ij=1:3
             pD = squeeze(du_dx(:,:,ii,ij,iO));
-            if ~sum(pD(:),'omitnan') == 0
+            if ~sum(pD(:)) == 0
                 iV= iV+1;
                 s{iV}=subplot(9,3,iV);
                 pcolor(Maps.X,Maps.Y,pD); clear pD
@@ -728,7 +550,7 @@ addScale([9 3 iV],[Maps.X(:) Maps.Y(:)]);
 
 cbax  = axes('visible', 'off');             cU(abs(cU)==1)=0;
 caxis(cbax,[min(cU(:)) max(cU(:))]);
-h = colorbar(cbax,'location','westoutside','position',[0.9011 0.1211 0.0121 0.7533]);
+h = colorbar(cbax, 'location', 'westoutside','position', [0.9011 0.1211 0.0121 0.7533] );
 h.Label.String = '\nablau';
 h.Label.FontSize = 30;
 for iO = 1:length(s)
@@ -792,7 +614,7 @@ c  =colorbar;	cU(9,:) = c.Limits;         colorbar off;
 %
 cbax  = axes('visible', 'off');             cU(abs(cU)==1)=0;
 caxis(cbax,[min(cU(:)) max(cU(:))]);
-h = colorbar(cbax,'location','westoutside','position',[0.9011 0.1211 0.0121 0.7533]);
+h = colorbar(cbax, 'location', 'westoutside','position', [0.9011 0.1211 0.0121 0.7533] );
 h.Label.String = [char(949)];
 h.Label.FontSize = 30;
 set([s1 s2 s3 s4 s5 s6 s7 s8 s9],"clim",caxis);
@@ -854,7 +676,7 @@ c  =colorbar;	cU(9,:) = c.Limits;     colorbar off;
 %
 cbax  = axes('visible', 'off');         cU(abs(cU)==1)=0;
 caxis(cbax,[min(cU(:)) max(cU(:))]);
-h = colorbar(cbax,'location','westoutside','position',[0.9011 0.1211 0.0121 0.7533]);
+h = colorbar(cbax, 'location', 'westoutside','position', [0.9011 0.1211 0.0121 0.7533] );
 h.Label.String = '\sigma [GPa]';
 h.Label.FontSize = 30;
 set([s1 s2 s3 s4 s5 s6 s7 s8 s9],"clim",caxis);
@@ -865,6 +687,7 @@ end
 
 %%
 function plot_JKIII(KI,KII,KIII,J,stepsize,input_unit)
+Kd = [KI.Raw(:); KII.Raw(:); KIII.Raw(:)];
 set(0,'defaultAxesFontSize',22);       set(0,'DefaultLineMarkerSize',14)
 Contour = (1:length(J.Raw))*stepsize;
 fig=figure;set(fig,'defaultAxesColorOrder',[[0 0 0]; [1 0 0]]);
@@ -873,7 +696,6 @@ plot(Contour,KI.Raw,'k--o','MarkerEdgeColor','k','LineWidth',4);
 plot(Contour,KII.Raw,'k--s','MarkerEdgeColor','k','LineWidth',1.5,'MarkerFaceColor','k');
 plot(Contour,KIII.Raw,'k--d','MarkerEdgeColor','k','LineWidth',4');
 ylabel('K (MPa m^{0.5})'); hold off
-Kd = [KI.Raw(:); KII.Raw(:); KIII.Raw(:)];
 if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
 yyaxis right;
 plot(Contour,J.Raw,'r--<','MarkerEdgeColor','r','LineWidth',1.5,'MarkerFaceColor','r');
@@ -883,7 +705,7 @@ legend(['K_{I} = '     num2str(KI.true)   ' ± ' num2str(KI.div)  ' MPa\surdm' ]
     ['K_{III} = '      num2str(KIII.true) ' ± ' num2str(KIII.div) ' MPa\surdm' ],...
     ['J_{integral} = ' num2str(J.true)    ' ± ' num2str(J.div)   ' J/m^2'],...
     'location','northoutside','box','off');
-set(gcf,'position',[60,-70,750,1000]);grid on;  box off;
+set(gcf,'position',[60,-70,750,1100]);grid on;  box off;
 ax1 = gca;  axPos = ax1.Position;
 % Change the position of ax1 to make room for extra axes
 % format is [left bottom width height], so moving up and making shorter here...
@@ -902,7 +724,6 @@ ax1.XLabel.String = ['Contour Distance [' input_unit ']'];
 ax2.XLabel.String = 'Contour Number';
 end
 
-%%
 function addScale(No,alldata)
 % funciton to add a measurment line to the graph, you can either input
 % number of the suplots or the exact suplot where you want to add the scale
@@ -930,205 +751,4 @@ ht = text(double(X(end-ceil(length(X)*0.24))),double(Y(ceil(length(Y)*0.14)))...
 set(ht,'FontSize',16,'FontWeight','Bold')
 set(gca,'Visible','off')
 hold off
-end
-
-%%
-function plot_JM(M, J, stepsize, input_unit,LorM)
-Md = M.Raw(:);
-set(0, 'defaultAxesFontSize', 22);
-set(0, 'DefaultLineMarkerSize', 14);
-Contour = (1:length(J.vectorial)) * stepsize;
-
-% Create figure and set color order
-fig = figure;
-set(fig, 'defaultAxesColorOrder', [[0 0 0]; [1 0 0]]);
-
-% Plot M on the left y-axis
-yyaxis left;
-hold on;
-% plot(Contour, M.Raw, 'k--d', 'MarkerEdgeColor', 'k', 'LineWidth', 4);  % Plot M.MRaw
-plot(Contour, M.Raw(1,:), 'k--o', 'LineWidth', 4);  % Plot M.MRaw
-plot(Contour, M.Raw(2,:), 'k--s', 'LineWidth', 4, 'MarkerFaceColor','k');  % Plot M.MRaw
-ylabel([LorM ' (J/m)']);
-Kd = M.Raw(:);
-if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
-hold off;
-
-% Plot J on the right y-axis
-yyaxis right; hold on
-plot(Contour, J.vectorial(1,:), 'r-->', 'MarkerEdgeColor', 'r', 'LineWidth', 1.5, 'MarkerFaceColor', 'r');  % Plot J.JRaw
-plot(Contour, J.vectorial(2,:), 'r--d', 'MarkerEdgeColor', 'r', 'LineWidth', 1.5);  % Plot J.JRaw
-
-ylabel('J (J/m^2)');
-Kd = J.vectorial(:);
-if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
-hold off
-
-% Update legend to only include M and J
-% legend(['M_{integral} = ' num2str(M.true) ' ± ' num2str(M.div) ' J/m'], ... %N/m
-legend([LorM '_{1} = ' num2str(M.true(1)) ' ± ' num2str(M.div(1)) ' J/m'], ...
-    [LorM '_{2} = ' num2str(M.true(2)) ' ± ' num2str(M.div(2)) ' J/m'], ...
-    ['J_{1} = ' num2str(J.vectorial_true(1)) ' ± ' num2str(J.vectorial_div(1)) ' J/m^2'], ... 
-    ['J_{2} = ' num2str(J.vectorial_true(2)) ' ± ' num2str(J.vectorial_div(2)) ' J/m^2'], ...%N
-    'location', 'northoutside', 'box', 'off');
-
-% Set figure size and formatting
-set(gcf, 'position', [800, -70, 750, 1000]);
-grid on;
-box off;
-
-% Adjust axes position
-ax1 = gca;
-axPos = ax1.Position;
-ax1.Position = axPos + [0 0.2 0 -0.15];
-ax1.LineWidth = 1;
-
-% Add second x-axis for contour number
-ax2 = axes('position', (axPos .* [1 1 1 1e-3]) + [0 0.08 0 0], ...
-    'color', 'none', 'linewidth', 1);
-ax2.XLim = [0 length(Contour) + 1];
-ax1.XLim = [0 max(Contour) + stepsize];
-
-% Label the axes
-if strcmpi(input_unit, 'um')
-    input_unit = '\mum';
-end
-ax1.XLabel.String = ['Contour Distance [' input_unit ']'];
-ax2.XLabel.String = 'Contour Number';
-end
-
-%%
-function [ alldata,dataum ] = reshapeData( raw_data )
-%PROCESS_DATA Summary of this function goes here
-%   Detailed explanation goes here
-% try
-%     if size(raw_data,2) == 4
-%         dataum.X1  = reshape(raw_data(:,1),length(unique(raw_data(:,1))),length(unique(raw_data(:,2))));
-%         dataum.Y1  = reshape(raw_data(:,2),length(unique(raw_data(:,1))),length(unique(raw_data(:,2))));
-%         dataum.Ux  = reshape(raw_data(:,3),length(unique(raw_data(:,1))),length(unique(raw_data(:,2))));
-%         dataum.Uy  = reshape(raw_data(:,4),length(unique(raw_data(:,1))),length(unique(raw_data(:,2))));
-%         alldata = [dataum.X1(:) dataum.Y1(:) dataum.Ux(:) dataum.Uy(:)];
-%     else
-%         dataum.X1  = reshape(raw_data(:,1),length(unique(raw_data(:,1))),length(unique(raw_data(:,2))),length(unique(raw_data(:,3))));
-%         dataum.Y1  = reshape(raw_data(:,2),length(unique(raw_data(:,1))),length(unique(raw_data(:,2))),length(unique(raw_data(:,3))));
-%         dataum.Z1  = reshape(raw_data(:,3),length(unique(raw_data(:,1))),length(unique(raw_data(:,2))),length(unique(raw_data(:,3))));
-%         dataum.Ux  = reshape(raw_data(:,4),length(unique(raw_data(:,1))),length(unique(raw_data(:,2))),length(unique(raw_data(:,3))));
-%         dataum.Uy  = reshape(raw_data(:,5),length(unique(raw_data(:,1))),length(unique(raw_data(:,2))),length(unique(raw_data(:,3))));
-%         dataum.Uz  = reshape(raw_data(:,6),length(unique(raw_data(:,1))),length(unique(raw_data(:,2))),length(unique(raw_data(:,3))));
-%         alldata = [dataum.X1(:) dataum.Y1(:) dataum.Z1(:) dataum.Ux(:) dataum.Uy(:) dataum.Uz(:)];
-%     end
-% catch
-    
-    x  = raw_data(:,1);
-    y  = raw_data(:,2);
-    ux = raw_data(:,3);
-    uy = raw_data(:,4);
-    
-    xVec = unique(x);
-    yVec = unique(y);
-    
-    % nDataPoints = length(x);
-    % if length(xVec) <	length(raw_data(:,1))*0.5
-    
-    %Define grid
-    [xMap,yMap] = meshgrid(xVec,yVec);
-    [nRows, nCols] = size(xMap);
-    
-    % nGridPoints = length(xMap(:));
-    
-    uxMap = NaN(nRows, nCols); %Initialise
-    uyMap = NaN(nRows, nCols); %Initialise
-    
-    if size(raw_data,2) == 6
-        z  = raw_data(:,3);
-        zVec = unique(z);
-        ux = raw_data(:,4);
-        uy = raw_data(:,5);
-        uz = raw_data(:,6);
-        [xMap,yMap,zMap] = meshgrid(xVec,yVec,zVec);
-        [nRows, nCols , nDep] = size(xMap);
-        uxMap = NaN(nRows, nCols, nDep); %Initialise
-        uyMap = NaN(nRows, nCols, nDep); %Initialise
-        uzMap = NaN(nRows, nCols, nDep); %Initialise
-    end
-    
-    for iRow = 1:nRows % loop rows
-        for iCol = 1:nCols % loop cols
-            
-            if size(raw_data,2) == 6 %% 3D
-                for iDep = 1:nDep
-                    xt = xMap(iRow,iCol,iDep);
-                    yt = yMap(iRow,iCol,iDep);
-                    zt = zMap(iRow,iCol,iDep);
-                    idx = find(x==xt & y==yt & z==zt);
-                    if ~isempty(idx)
-                        uxt = ux(idx(1));
-                        uyt = uy(idx(1));
-                        uzt = uz(idx(1));
-                        uxMap(iRow,iCol,iDep) = uxt;
-                        uyMap(iRow,iCol,iDep) = uyt;
-                        uzMap(iRow,iCol,iDep) = uzt;
-                    end
-                end
-                
-            else %% 2D
-                xt = xMap(iRow,iCol);
-                yt = yMap(iRow,iCol);
-                idx = find(and(x==xt,y==yt)); %find linear index of point corresponding to xt,yt;
-                if ~isempty(idx)
-                    uxt = ux(idx(1));
-                    uyt = uy(idx(1));
-                    uxMap(iRow,iCol) = uxt;
-                    uyMap(iRow,iCol) = uyt;
-                end
-            end
-        end
-    end
-    
-    dataum.X1 = xMap;
-    dataum.Y1 = yMap;
-    % dataum.Uy = uyMap;
-    % dataum.Ux = uxMap;
-    % threshold = 0.95;
-    % [ uxMap ] = dispFieldSmoothing( uxMap, threshold );
-    dataum.Ux = uxMap;
-    % [ uyMap ] = dispFieldSmoothing( uyMap, threshold );
-    dataum.Uy = uyMap;
-
-alldata = [dataum.X1(:) dataum.Y1(:) dataum.Ux(:) dataum.Uy(:)];
-if size(raw_data,2) == 6
-    dataum.Z1 = zMap;
-    dataum.Uz = uzMap;
-    alldata = [dataum.X1(:) dataum.Y1(:) dataum.Z1(:) dataum.Ux(:) dataum.Uy(:) dataum.Uz(:)];
-end
-% end
-%{
-else
-	disp('the data is highly non-uniform, I will now re-arrange the data');
-%     scatter3(alldata(:,1), alldata(:,2), alldata(:,3),[],alldata(:,3)); view([0 90])
-	Fx = scatteredInterpolant(raw_data(:,1), raw_data(:,2), raw_data(:,3),'natural','nearest');
-	Fy = scatteredInterpolant(raw_data(:,1), raw_data(:,2), raw_data(:,4),'natural','nearest');
-	X = linspace(min(raw_data(:,1)),max(raw_data(:,1)),300);
-	Y = min(raw_data(:,2)):abs(X(2)-X(1)):max(raw_data(:,2));
-	[dataum.X1,dataum.Y1] = meshgrid(X,Y);
-	Ux = Fx(dataum.X1(:),dataum.Y1(:));
-	Uy = Fy(dataum.X1(:),dataum.Y1(:));
-    dataum.Ux = reshape(Ux,length(Y),length(X));
-    dataum.Uy = reshape(Uy,length(Y),length(X));
-	% scatter3(x(:),y(:),Ux,[],Ux); view([0 90])
-end
-%}
-end
-
-function [cx,cy,cz]=crackgradient(c,dx)
-c=squeeze(c);
-[row,~]=size(c);
-midr=floor(row/2);
-ctop=c(1:midr,:);
-cbot=c(midr+1:end,:);
-[cxtop,cytop]=gradient(ctop,dx);
-[cxbot,cybot]=gradient(cbot,dx);
-cx=[cxtop;cxbot];
-cy=[cytop;cybot];
-cz=zeros(size(cx));
 end

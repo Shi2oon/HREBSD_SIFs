@@ -1,5 +1,6 @@
 % Example, synthetic data
 clc;clear;close all
+addpath([pwd '\functions'])
 [Prop,~,alldata] = Calibration_2DKIII(1,2,3);
 
 % [J,KI,KII,KIII] = KIII_2D_v2(alldata,Prop); % as desigignated maps
