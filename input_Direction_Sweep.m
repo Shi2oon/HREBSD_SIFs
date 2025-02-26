@@ -13,7 +13,8 @@ Prop.units.xy = 'mm';  % Units for coordinates
 Prop.stressstat = 'plane_stress';  % Stress state assumption
 
 % Define the rotation angles for the crack orientation
-crack_angles = -90:5:90;  % Angles from -90 to 90 degrees in increments of 5 degrees
+% crack_angles = -90:5:90;  % Angles from -90 to 90 degrees in increments of 5 degrees
+crack_angles = -9:0.01:-8.9;  % Angles from -90 to 90 degrees in increments of 5 degrees
 
 % Preallocate arrays to store results for the J-integral and stress intensity factors
 J_values = NaN(length(crack_angles), 1);  % J-integral values
@@ -106,8 +107,8 @@ xlabel('q\circ');  % Label for the x-axis (crack angle)
 legend('Location', 'best');  % Add a legend to the plot
 title('Stress Intensity Factors and J-integral vs Crack Direction Angles');  % Title for the plot
 grid on;  % Enable grid on the plot
-set(gcf, 'position', [30 50 1809 954]);  % Set the position and size of the figure window
-
+set(gcf, 'position', [30 50 1244 643]);  % Set the position and size of the figure window
+xticks([-90:15:90]);xlim([-90 90])
 % Save the figure in both .fig and .tif formats
 saveas(gcf, 'Ks.fig');  saveas(gcf, 'Ks.tif');  close;  % Close the figure window
 %%
@@ -126,12 +127,13 @@ hold off;  % Release the hold on the current plot
 yyaxis right;  % Use the right y-axis
 hold on;  % Hold on to the current plot
 errorbar(crack_angles, Jv_values(:,1), Jv_STD(:,1), '-^r', 'DisplayName', 'J_1', 'MarkerFaceColor', 'r', 'MarkerSize', 12, 'LineWidth', 1.5);
-errorbar(crack_angles, Jv_values(:,2), Jv_STD(:,2), '-^r', 'DisplayName', 'J_2', 'MarkerFaceColor', 'r', 'MarkerSize', 12, 'LineWidth', 1.5);
+errorbar(crack_angles, Jv_values(:,2), Jv_STD(:,2), '-dr', 'DisplayName', 'J_2', 'MarkerFaceColor', 'r', 'MarkerSize', 12, 'LineWidth', 1.5);
 hold off;  % Hold on to the current plot
 ylabel('J (J/m^{2})');  % Label for the right y-axis
 xlabel('q\circ');  % Label for the x-axis (crack angle)
 legend('Location', 'best');  % Add a legend to the plot
 title('M and J-integral vs Crack Direction Angles');  % Title for the plot
 grid on;  % Enable grid on the plot
-set(gcf, 'position', [30 50 1809 954]);  % Set the position and size of the figure window
+set(gcf, 'position', [30 50 1244 643]);  % Set the position and size of the figure window
+% xticks([-90:15:90]);xlim([-90 90])
 saveas(gcf, 'Ms.fig');  saveas(gcf, 'Ms.tif');  close

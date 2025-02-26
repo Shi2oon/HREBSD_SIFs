@@ -95,35 +95,36 @@ end
 %
 %% prepare Data
 if ~exist('loopedJ','var')
-imagesc(Maps.du11);
-axis tight; axis image; axis off; colormap jet
-set(gcf,'position',[737 287 955 709]);
-%
-opts.Interpreter = 'tex';       % Include the desired Default answer
-opts.Default     = 'N';         % Use the TeX interpreter to format the question
-quest            = 'Do you want to Crop and Centre the Crack tip';
-answer           = questdlg(quest,'Boundary Condition','Y','N', opts);
-if strcmpi(answer,'Y') % crop data
-    [Crop] = CroppingEqually(Maps);
-    Maps.X    = Crop.X;      Maps.Y   = Crop.Y;        Maps.Z   = Crop.Z;
-    Maps.du11 = Crop.du11;  Maps.du12 = Crop.du12;    Maps.du13 = Crop.du13;
-    Maps.du21 = Crop.du21;  Maps.du22 = Crop.du22;    Maps.du23 = Crop.du23;
-    Maps.du31 = Crop.du31;  Maps.du32 = Crop.du32;    Maps.du33 = Crop.du33;
-end
-opts.Interpreter = 'tex';       % Include the desired Default answer
-opts.Default     = 'L';         % Use the TeX interpreter to format the question
-quest            = 'Is the crack on your left or right ?';
-answer           = questdlg(quest,'Boundary Condition','L','R', opts);
-if strcmpi(answer,'R') % crop data
-    %}
-    Maps.du11 = flip(flip(Maps.du11,1),2);    Maps.du12 = flip(flip(Maps.du12,1),2);
-    Maps.du13 = flip(flip(Maps.du13,1),2);
-    Maps.du21 = flip(flip(Maps.du21,1),2);    Maps.du22 = flip(flip(Maps.du22,1),2);
-    Maps.du23 = flip(flip(Maps.du23,1),2);
-    Maps.du31 = flip(flip(Maps.du31,1),2);    Maps.du32 = flip(flip(Maps.du32,1),2);
-    Maps.du33 = flip(flip(Maps.du33,1),2);
-end
-close
+    imagesc(Maps.du11);
+    axis tight; axis image; axis off; colormap jet
+    set(gcf,'position',[737 287 955 709]);
+    %
+    opts.Interpreter = 'tex';       % Include the desired Default answer
+    opts.Default     = 'N';         % Use the TeX interpreter to format the question
+    quest            = 'Do you want to Crop and Centre the Crack tip';
+    answer           = questdlg(quest,'Boundary Condition','Y','N', opts);
+    if strcmpi(answer,'Y') % crop data
+        [Crop] = CroppingEqually(Maps);
+        Crop = center_Crack_tip(Crop);
+        Maps.X    = Crop.X;      Maps.Y   = Crop.Y;        Maps.Z   = Crop.Z;
+        Maps.du11 = Crop.du11;  Maps.du12 = Crop.du12;    Maps.du13 = Crop.du13;
+        Maps.du21 = Crop.du21;  Maps.du22 = Crop.du22;    Maps.du23 = Crop.du23;
+        Maps.du31 = Crop.du31;  Maps.du32 = Crop.du32;    Maps.du33 = Crop.du33;
+    end
+    opts.Interpreter = 'tex';       % Include the desired Default answer
+    opts.Default     = 'L';         % Use the TeX interpreter to format the question
+    quest            = 'Is the crack on your left or right ?';
+    answer           = questdlg(quest,'Boundary Condition','L','R', opts);
+    if strcmpi(answer,'R') % crop data
+        %}
+        Maps.du11 = flip(flip(Maps.du11,1),2);    Maps.du12 = flip(flip(Maps.du12,1),2);
+        Maps.du13 = flip(flip(Maps.du13,1),2);
+        Maps.du21 = flip(flip(Maps.du21,1),2);    Maps.du22 = flip(flip(Maps.du22,1),2);
+        Maps.du23 = flip(flip(Maps.du23,1),2);
+        Maps.du31 = flip(flip(Maps.du31,1),2);    Maps.du32 = flip(flip(Maps.du32,1),2);
+        Maps.du33 = flip(flip(Maps.du33,1),2);
+    end
+    close
 end
 %}
 %%
@@ -159,7 +160,7 @@ switch Maps.units.xy
         saf = 1e-9;
 end
 
-Maps.stepsize = unique(round(diff(unique(Maps.Y(:))),4))*saf;
+Maps.stepsize = mean(unique(round(diff(unique(Maps.Y(:))),4)),'omitnan')*saf;
 Maps.X = Maps.X*saf;
 Maps.Y = Maps.Y*saf;
 Maps.units.St = 'Pa';        Maps.units.xy = 'um';
@@ -247,12 +248,12 @@ J.Raw = sum(J.Raw,'omitnan');
 if exist('loopedJ','var')
     oh = loopedJ;
 else
-figure; plot(J.Raw); legend('J')%trim acess
-set(gcf,'position',[98 311 1481 667])
-text(1:length(J.Raw),J.Raw,string([1:length(J.Raw)]))
-pause(0.1)
-%}
-oh = input('where to cut the contour? '); close
+    figure; plot(J.Raw); legend('J')%trim acess
+    set(gcf,'position',[98 311 1481 667])
+    text(1:length(J.Raw),J.Raw,string([1:length(J.Raw)]))
+    pause(0.1)
+    %}
+    oh = input('where to cut the contour? '); close
 end
 
 %%
@@ -639,61 +640,6 @@ end
 
 end
 %%
-function [Crop] = CroppingEqually(Maps)
-close all;                  fig=subplot(1,1,1);
-imagesc(Maps.X(1,:),Maps.Y(:,1),Maps.du11);
-axis image;                 set(gca,'Ydir','normal');   %axis off;
-colorbar;   %colormap jet;
-set(gcf,'position',[30 50 1300 950])
-xlabel('X [Raw Data Units]');          ylabel('Y [Raw Data Units]');
-title('select the tip')
-[lineX,lineY] = ginput(1);
-title('Select Area to Crop');
-[Xcrop,Ycrop] = ginput(2);
-Xcrop = [min(Xcrop);max(Xcrop)];
-Ycrop = [min(Ycrop);max(Ycrop)];
-xLin          = Maps.X(1,:);                     yLin         = Maps.Y(:,1);
-[~, Xcrop(1)] = min(abs(xLin-Xcrop(1)));   Xcrop(1) = xLin(Xcrop(1));
-[~, Xcrop(2)] = min(abs(xLin-Xcrop(2)));   Xcrop(2) = xLin(Xcrop(2));
-[~, Ycrop(1)] = min(abs(yLin-Ycrop(1)));   Ycrop(1) = yLin(Ycrop(1));
-[~, Ycrop(2)] = min(abs(yLin-Ycrop(2)));   Ycrop(2) = yLin(Ycrop(2));
-if abs(mean(lineY)-Ycrop(1)) ~= abs(mean(lineY)-Ycrop(2))
-    addi  = (abs(lineY-Ycrop(1))+abs(lineY-Ycrop(2)))/2;
-    Ycrop = [lineY-addi, lineY+addi];
-end
-Xcrop(1) = 2*lineX-Xcrop(2);
-Dis = (abs(Ycrop(2) - Ycrop(1))-abs(Xcrop(2) - Xcrop(1)))/2;
-Xcrop = [Xcrop(1)-Dis Xcrop(2)+Dis];
-hold on
-plot([Xcrop(1) Xcrop(2) Xcrop(2) Xcrop(1) Xcrop(1)],...
-    [Ycrop(1) Ycrop(1) Ycrop(2) Ycrop(2) Ycrop(1)],'color','k')
-plot(lineX,lineY,'pw')
-hold off
-
-[~, Xcrop(1)] = min(abs(xLin-Xcrop(1)));
-[~, Xcrop(2)] = min(abs(xLin-Xcrop(2)));
-[~, Ycrop(1)] = min(abs(yLin-Ycrop(1)));
-[~, Ycrop(2)] = min(abs(yLin-Ycrop(2)));
-
-for iV=1:3
-    for iO=1:3
-        eval(sprintf('Crop.du%d%d = Maps.du%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
-            iV,iO,iV,iO));
-    end
-end
-
-%% XY, steps and stifness
-Maps.Z = zeros(size(Maps.X));
-Crop.X   = Maps.X(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));
-Crop.Y   = Maps.Y(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));
-Crop.Z   = Maps.Z(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));
-Crop.X   = Crop.X - min(min(Crop.X));  	Crop.Y   = Crop.Y - min(min(Crop.Y));
-if (Crop.X(1) - Crop.X(end))>0;         Crop.X   = flip(Crop.X,2);         end
-if (Crop.Y(1) - Crop.Y(end))>0;         Crop.Y   = flip(Crop.Y,1);         end
-
-end
-
-%%
 function plot_DecomposeddU(du_dx,Maps)
 figure;
 iV=0;   Mo = {'I','II','III'}; KK = {'x','y','z'};
@@ -970,7 +916,7 @@ hold off
 % legend(['M_{integral} = ' num2str(M.true) ' ± ' num2str(M.div) ' J/m'], ... %N/m
 legend([LorM '_{1} = ' num2str(M.true(1)) ' ± ' num2str(M.div(1)) ' J/m'], ...
     [LorM '_{2} = ' num2str(M.true(2)) ' ± ' num2str(M.div(2)) ' J/m'], ...
-    ['J_{1} = ' num2str(J.vectorial_true(1)) ' ± ' num2str(J.vectorial_div(1)) ' J/m^2'], ... 
+    ['J_{1} = ' num2str(J.vectorial_true(1)) ' ± ' num2str(J.vectorial_div(1)) ' J/m^2'], ...
     ['J_{2} = ' num2str(J.vectorial_true(2)) ' ± ' num2str(J.vectorial_div(2)) ' J/m^2'], ...%N
     'location', 'northoutside', 'box', 'off');
 
@@ -1020,82 +966,82 @@ function [ alldata,dataum ] = reshapeData( raw_data )
 %         alldata = [dataum.X1(:) dataum.Y1(:) dataum.Z1(:) dataum.Ux(:) dataum.Uy(:) dataum.Uz(:)];
 %     end
 % catch
-    
-    x  = raw_data(:,1);
-    y  = raw_data(:,2);
-    ux = raw_data(:,3);
-    uy = raw_data(:,4);
-    
-    xVec = unique(x);
-    yVec = unique(y);
-    
-    % nDataPoints = length(x);
-    % if length(xVec) <	length(raw_data(:,1))*0.5
-    
-    %Define grid
-    [xMap,yMap] = meshgrid(xVec,yVec);
-    [nRows, nCols] = size(xMap);
-    
-    % nGridPoints = length(xMap(:));
-    
-    uxMap = NaN(nRows, nCols); %Initialise
-    uyMap = NaN(nRows, nCols); %Initialise
-    
-    if size(raw_data,2) == 6
-        z  = raw_data(:,3);
-        zVec = unique(z);
-        ux = raw_data(:,4);
-        uy = raw_data(:,5);
-        uz = raw_data(:,6);
-        [xMap,yMap,zMap] = meshgrid(xVec,yVec,zVec);
-        [nRows, nCols , nDep] = size(xMap);
-        uxMap = NaN(nRows, nCols, nDep); %Initialise
-        uyMap = NaN(nRows, nCols, nDep); %Initialise
-        uzMap = NaN(nRows, nCols, nDep); %Initialise
-    end
-    
-    for iRow = 1:nRows % loop rows
-        for iCol = 1:nCols % loop cols
-            
-            if size(raw_data,2) == 6 %% 3D
-                for iDep = 1:nDep
-                    xt = xMap(iRow,iCol,iDep);
-                    yt = yMap(iRow,iCol,iDep);
-                    zt = zMap(iRow,iCol,iDep);
-                    idx = find(x==xt & y==yt & z==zt);
-                    if ~isempty(idx)
-                        uxt = ux(idx(1));
-                        uyt = uy(idx(1));
-                        uzt = uz(idx(1));
-                        uxMap(iRow,iCol,iDep) = uxt;
-                        uyMap(iRow,iCol,iDep) = uyt;
-                        uzMap(iRow,iCol,iDep) = uzt;
-                    end
-                end
-                
-            else %% 2D
-                xt = xMap(iRow,iCol);
-                yt = yMap(iRow,iCol);
-                idx = find(and(x==xt,y==yt)); %find linear index of point corresponding to xt,yt;
+
+x  = raw_data(:,1);
+y  = raw_data(:,2);
+ux = raw_data(:,3);
+uy = raw_data(:,4);
+
+xVec = unique(x);
+yVec = unique(y);
+
+% nDataPoints = length(x);
+% if length(xVec) <	length(raw_data(:,1))*0.5
+
+%Define grid
+[xMap,yMap] = meshgrid(xVec,yVec);
+[nRows, nCols] = size(xMap);
+
+% nGridPoints = length(xMap(:));
+
+uxMap = NaN(nRows, nCols); %Initialise
+uyMap = NaN(nRows, nCols); %Initialise
+
+if size(raw_data,2) == 6
+    z  = raw_data(:,3);
+    zVec = unique(z);
+    ux = raw_data(:,4);
+    uy = raw_data(:,5);
+    uz = raw_data(:,6);
+    [xMap,yMap,zMap] = meshgrid(xVec,yVec,zVec);
+    [nRows, nCols , nDep] = size(xMap);
+    uxMap = NaN(nRows, nCols, nDep); %Initialise
+    uyMap = NaN(nRows, nCols, nDep); %Initialise
+    uzMap = NaN(nRows, nCols, nDep); %Initialise
+end
+
+for iRow = 1:nRows % loop rows
+    for iCol = 1:nCols % loop cols
+
+        if size(raw_data,2) == 6 %% 3D
+            for iDep = 1:nDep
+                xt = xMap(iRow,iCol,iDep);
+                yt = yMap(iRow,iCol,iDep);
+                zt = zMap(iRow,iCol,iDep);
+                idx = find(x==xt & y==yt & z==zt);
                 if ~isempty(idx)
                     uxt = ux(idx(1));
                     uyt = uy(idx(1));
-                    uxMap(iRow,iCol) = uxt;
-                    uyMap(iRow,iCol) = uyt;
+                    uzt = uz(idx(1));
+                    uxMap(iRow,iCol,iDep) = uxt;
+                    uyMap(iRow,iCol,iDep) = uyt;
+                    uzMap(iRow,iCol,iDep) = uzt;
                 end
+            end
+
+        else %% 2D
+            xt = xMap(iRow,iCol);
+            yt = yMap(iRow,iCol);
+            idx = find(and(x==xt,y==yt)); %find linear index of point corresponding to xt,yt;
+            if ~isempty(idx)
+                uxt = ux(idx(1));
+                uyt = uy(idx(1));
+                uxMap(iRow,iCol) = uxt;
+                uyMap(iRow,iCol) = uyt;
             end
         end
     end
-    
-    dataum.X1 = xMap;
-    dataum.Y1 = yMap;
-    % dataum.Uy = uyMap;
-    % dataum.Ux = uxMap;
-    % threshold = 0.95;
-    % [ uxMap ] = dispFieldSmoothing( uxMap, threshold );
-    dataum.Ux = uxMap;
-    % [ uyMap ] = dispFieldSmoothing( uyMap, threshold );
-    dataum.Uy = uyMap;
+end
+
+dataum.X1 = xMap;
+dataum.Y1 = yMap;
+% dataum.Uy = uyMap;
+% dataum.Ux = uxMap;
+% threshold = 0.95;
+% [ uxMap ] = dispFieldSmoothing( uxMap, threshold );
+dataum.Ux = uxMap;
+% [ uyMap ] = dispFieldSmoothing( uyMap, threshold );
+dataum.Uy = uyMap;
 
 alldata = [dataum.X1(:) dataum.Y1(:) dataum.Ux(:) dataum.Uy(:)];
 if size(raw_data,2) == 6
@@ -1121,7 +1067,7 @@ else
 end
 %}
 end
-
+%%
 function [cx,cy,cz]=crackgradient(c,dx)
 c=squeeze(c);
 [row,~]=size(c);
@@ -1133,4 +1079,152 @@ cbot=c(midr+1:end,:);
 cx=[cxtop;cxbot];
 cy=[cytop;cybot];
 cz=zeros(size(cx));
+end
+%% crop data
+function Crop = center_Crack_tip(Maps)
+data = Maps.du11;
+% Display the data and get the click point
+figure, imagesc(data);
+colormap('jet');
+colorbar;
+title('Click on the point to center');
+[x, y] = ginput(1);
+close;
+
+% Get data dimensions
+[rows, cols] = size(data);
+
+% Calculate the new dimensions to make the data square
+new_dim = max(rows, cols);
+
+% Create a new matrix of the new dimensions filled with NaNs (or any other placeholder)
+new_data = NaN(new_dim, new_dim);
+
+% Calculate the offset to center the data
+row_offset = floor((new_dim - rows) / 2);
+col_offset = floor((new_dim - cols) / 2);
+
+% Place the original data in the center of the new matrix
+new_X(row_offset + 1:row_offset + rows, col_offset + 1:col_offset + cols) = Maps.X;
+new_Y(row_offset + 1:row_offset + rows, col_offset + 1:col_offset + cols) = Maps.Y;
+new_Z(row_offset + 1:row_offset + rows, col_offset + 1:col_offset + cols) = Maps.Z;
+new_du11(row_offset + 1:row_offset + rows, col_offset + 1:col_offset + cols) = Maps.du11;
+new_du12(row_offset + 1:row_offset + rows, col_offset + 1:col_offset + cols) = Maps.du12;
+new_du13(row_offset + 1:row_offset + rows, col_offset + 1:col_offset + cols) = Maps.du13;
+new_du21(row_offset + 1:row_offset + rows, col_offset + 1:col_offset + cols) = Maps.du21;
+new_du22(row_offset + 1:row_offset + rows, col_offset + 1:col_offset + cols) = Maps.du22;
+new_du23(row_offset + 1:row_offset + rows, col_offset + 1:col_offset + cols) = Maps.du23;
+new_du31(row_offset + 1:row_offset + rows, col_offset + 1:col_offset + cols) = Maps.du31;
+new_du32(row_offset + 1:row_offset + rows, col_offset + 1:col_offset + cols) = Maps.du32;
+new_du33(row_offset + 1:row_offset + rows, col_offset + 1:col_offset + cols) = Maps.du33;
+
+% Calculate the new center point
+new_center_x = col_offset + x;
+new_center_y = row_offset + y;
+
+% Shift the data to center the clicked point
+shift_x = floor(new_dim / 2) - new_center_x;
+shift_y = floor(new_dim / 2) - new_center_y;
+
+% Create the final centered data
+Crop.X = NaN(new_dim, new_dim);
+Crop.X(max(1, 1 + shift_y):min(new_dim, new_dim + shift_y), max(1, 1 + shift_x):min(new_dim, new_dim + shift_x)) = ...
+    new_X(max(1, 1 - shift_y):min(new_dim, new_dim - shift_y), max(1, 1 - shift_x):min(new_dim, new_dim - shift_x));
+Crop.Y = NaN(new_dim, new_dim);
+Crop.Y(max(1, 1 + shift_y):min(new_dim, new_dim + shift_y), max(1, 1 + shift_x):min(new_dim, new_dim + shift_x)) = ...
+    new_Y(max(1, 1 - shift_y):min(new_dim, new_dim - shift_y), max(1, 1 - shift_x):min(new_dim, new_dim - shift_x));
+Crop.Z = NaN(new_dim, new_dim);
+Crop.Z(max(1, 1 + shift_y):min(new_dim, new_dim + shift_y), max(1, 1 + shift_x):min(new_dim, new_dim + shift_x)) = ...
+    new_Z(max(1, 1 - shift_y):min(new_dim, new_dim - shift_y), max(1, 1 - shift_x):min(new_dim, new_dim - shift_x));
+
+Crop.du11 = NaN(new_dim, new_dim);
+Crop.du11(max(1, 1 + shift_y):min(new_dim, new_dim + shift_y), max(1, 1 + shift_x):min(new_dim, new_dim + shift_x)) = ...
+    new_du11(max(1, 1 - shift_y):min(new_dim, new_dim - shift_y), max(1, 1 - shift_x):min(new_dim, new_dim - shift_x));
+Crop.du12 = NaN(new_dim, new_dim);
+Crop.du12(max(1, 1 + shift_y):min(new_dim, new_dim + shift_y), max(1, 1 + shift_x):min(new_dim, new_dim + shift_x)) = ...
+    new_du12(max(1, 1 - shift_y):min(new_dim, new_dim - shift_y), max(1, 1 - shift_x):min(new_dim, new_dim - shift_x));
+Crop.du13 = NaN(new_dim, new_dim);
+Crop.du13(max(1, 1 + shift_y):min(new_dim, new_dim + shift_y), max(1, 1 + shift_x):min(new_dim, new_dim + shift_x)) = ...
+    new_du13(max(1, 1 - shift_y):min(new_dim, new_dim - shift_y), max(1, 1 - shift_x):min(new_dim, new_dim - shift_x));
+
+Crop.du21 = NaN(new_dim, new_dim);
+Crop.du21(max(1, 1 + shift_y):min(new_dim, new_dim + shift_y), max(1, 1 + shift_x):min(new_dim, new_dim + shift_x)) = ...
+    new_du21(max(1, 1 - shift_y):min(new_dim, new_dim - shift_y), max(1, 1 - shift_x):min(new_dim, new_dim - shift_x));
+Crop.du22 = NaN(new_dim, new_dim);
+Crop.du22(max(1, 1 + shift_y):min(new_dim, new_dim + shift_y), max(1, 1 + shift_x):min(new_dim, new_dim + shift_x)) = ...
+    new_du22(max(1, 1 - shift_y):min(new_dim, new_dim - shift_y), max(1, 1 - shift_x):min(new_dim, new_dim - shift_x));
+Crop.du23 = NaN(new_dim, new_dim);
+Crop.du23(max(1, 1 + shift_y):min(new_dim, new_dim + shift_y), max(1, 1 + shift_x):min(new_dim, new_dim + shift_x)) = ...
+    new_du23(max(1, 1 - shift_y):min(new_dim, new_dim - shift_y), max(1, 1 - shift_x):min(new_dim, new_dim - shift_x));
+
+Crop.du31 = NaN(new_dim, new_dim);
+Crop.du31(max(1, 1 + shift_y):min(new_dim, new_dim + shift_y), max(1, 1 + shift_x):min(new_dim, new_dim + shift_x)) = ...
+    new_du31(max(1, 1 - shift_y):min(new_dim, new_dim - shift_y), max(1, 1 - shift_x):min(new_dim, new_dim - shift_x));
+Crop.du32 = NaN(new_dim, new_dim);
+Crop.du32(max(1, 1 + shift_y):min(new_dim, new_dim + shift_y), max(1, 1 + shift_x):min(new_dim, new_dim + shift_x)) = ...
+    new_du32(max(1, 1 - shift_y):min(new_dim, new_dim - shift_y), max(1, 1 - shift_x):min(new_dim, new_dim - shift_x));
+Crop.du33 = NaN(new_dim, new_dim);
+Crop.du33(max(1, 1 + shift_y):min(new_dim, new_dim + shift_y), max(1, 1 + shift_x):min(new_dim, new_dim + shift_x)) = ...
+    new_du33(max(1, 1 - shift_y):min(new_dim, new_dim - shift_y), max(1, 1 - shift_x):min(new_dim, new_dim - shift_x));
+
+% Display the final data
+figure, imagesc(Crop.du11);
+colormap('jet');
+colorbar;
+title('Centered Data');
+end
+
+%%
+function [Crop] = CroppingEqually(Maps)
+close all;                  fig=subplot(1,1,1);
+imagesc(Maps.X(1,:),Maps.Y(:,1),Maps.du11);
+axis image;                 set(gca,'Ydir','normal');   %axis off;
+colorbar;   %colormap jet;
+set(gcf,'position',[30 50 1300 950])
+xlabel('X [Raw Data Units]');          ylabel('Y [Raw Data Units]');
+title('select the tip')
+[lineX,lineY] = ginput(1);
+title('Select Area to Crop');
+[Xcrop,Ycrop] = ginput(2);
+Xcrop = [min(Xcrop);max(Xcrop)];
+Ycrop = [min(Ycrop);max(Ycrop)];
+xLin          = Maps.X(1,:);                     yLin         = Maps.Y(:,1);
+[~, Xcrop(1)] = min(abs(xLin-Xcrop(1)));   Xcrop(1) = xLin(Xcrop(1));
+[~, Xcrop(2)] = min(abs(xLin-Xcrop(2)));   Xcrop(2) = xLin(Xcrop(2));
+[~, Ycrop(1)] = min(abs(yLin-Ycrop(1)));   Ycrop(1) = yLin(Ycrop(1));
+[~, Ycrop(2)] = min(abs(yLin-Ycrop(2)));   Ycrop(2) = yLin(Ycrop(2));
+if abs(mean(lineY)-Ycrop(1)) ~= abs(mean(lineY)-Ycrop(2))
+    addi  = (abs(lineY-Ycrop(1))+abs(lineY-Ycrop(2)))/2;
+    Ycrop = [lineY-addi, lineY+addi];
+end
+Xcrop(1) = 2*lineX-Xcrop(2);
+Dis = (abs(Ycrop(2) - Ycrop(1))-abs(Xcrop(2) - Xcrop(1)))/2;
+Xcrop = [Xcrop(1)-Dis Xcrop(2)+Dis];
+hold on
+plot([Xcrop(1) Xcrop(2) Xcrop(2) Xcrop(1) Xcrop(1)],...
+    [Ycrop(1) Ycrop(1) Ycrop(2) Ycrop(2) Ycrop(1)],'color','k')
+plot(lineX,lineY,'pw')
+hold off
+
+[~, Xcrop(1)] = min(abs(xLin-Xcrop(1)));
+[~, Xcrop(2)] = min(abs(xLin-Xcrop(2)));
+[~, Ycrop(1)] = min(abs(yLin-Ycrop(1)));
+[~, Ycrop(2)] = min(abs(yLin-Ycrop(2)));
+
+for iV=1:3
+    for iO=1:3
+        eval(sprintf('Crop.du%d%d = Maps.du%d%d(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));',...
+            iV,iO,iV,iO));
+    end
+end
+
+%% XY, steps and stifness
+Maps.Z = zeros(size(Maps.X));
+Crop.X   = Maps.X(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));
+Crop.Y   = Maps.Y(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));
+Crop.Z   = Maps.Z(min(Ycrop):max(Ycrop),min(Xcrop):max(Xcrop));
+Crop.X   = Crop.X - min(min(Crop.X));  	Crop.Y   = Crop.Y - min(min(Crop.Y));
+if (Crop.X(1) - Crop.X(end))>0;         Crop.X   = flip(Crop.X,2);         end
+if (Crop.Y(1) - Crop.Y(end))>0;         Crop.Y   = flip(Crop.Y,1);         end
+close all
 end
