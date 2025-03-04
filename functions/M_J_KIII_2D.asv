@@ -101,8 +101,9 @@ end
 %
 %% prepare Data
 if ~exist('loopedJ','var')
-    pcolor(Maps.du11);
-    axis tight; axis image; axis off; colormap jet;set(gca,'Ydir','reverse');shading interp;
+    imagesc(Maps.du11);
+    pcolor(eyy);axis image;set(gca,'Ydir','reverse');shading interp;colormap jet; axis off
+    axis tight; axis image; axis off; colormap jet
     set(gcf,'position',[737 287 955 709]);
     %
     opts.Interpreter = 'tex';       % Include the desired Default answer
@@ -437,7 +438,6 @@ du_dx(:,:,3,2,3) = 0.5*(squeeze(A(:,:,3,2)) + flipud(squeeze(A(:,:,3,2))));
 du_dx(:,:,3,3,3) = zeros(size(squeeze(A(:,:,1,1))));
 %
 % strain from displacement gradient
-De_E = NaN(size(du_dx));
 for i=1:3
     for j=1:3
         for M=1:3
@@ -447,7 +447,6 @@ for i=1:3
 end
 
 %%
-De_S = NaN(size(De_E));
 if ~isfield(Maps, 'Stiffness') && ~isfield(Maps, 'Exponent') % linear istropic material
     % Chauchy stress tensor, assming linear-elastic, isotropic material for
     De_S(:,:,1,1,:) = Maps.E/(1-Maps.nu^2)*(De_E(:,:,1,1,:) + ...
@@ -497,7 +496,7 @@ elseif isfield(Maps, 'Exponent') %Ramberg-Osgood equation
             for iter = 1:max_iterations
                 % Equivalent stress (von Mises stress)
                 sigma_eq = sqrt(3/2 * sum(sum((sigma_ij...
-                    - mean(sigma_ij, 'all','omitnan')).^2)));
+                    - mean(sigma_ij, 'all')).^2)));
 
                 % Ramberg-Osgood equation
                 f = De_E(yi, xi, :, :,iV) - (sigma_ij / Maps.E) - ...
@@ -533,7 +532,7 @@ for iV = 1:3
         eval(sprintf('A(:,:,iV,xi) = Maps.du%d%d;', iV, xi));  % Assuming Maps.E11, Maps.E12, etc.
     end
 end
-De_E = NaN(size(A));
+% De_E = NaN(size(A));
 % Strain from displacement gradient
 for i = 1:3
     for j = 1:3
@@ -542,7 +541,7 @@ for i = 1:3
 end
 
 %% Stress Tensor Calculation
-De_S = NaN(size(De_E));
+% De_S = NaN(size(De_E));
 if ~isfield(Maps, 'Stiffness') && ~isfield(Maps, 'Exponent') % linear isotropic material
     % Cauchy stress tensor, assuming linear-elastic, isotropic material
     De_S(:,:,1,1) = Maps.E / (1 - Maps.nu^2) * (De_E(:,:,1,1) + ...
@@ -588,7 +587,7 @@ elseif isfield(Maps, 'Exponent') %Ramberg-Osgood equation
             for iter = 1:max_iterations
                 % Equivalent stress (von Mises stress)
                 sigma_eq = sqrt(3/2 * sum(sum((sigma_ij...
-                    - mean(sigma_ij, 'all','omitnan')).^2)));
+                    - mean(sigma_ij, 'all')).^2)));
 
                 % Ramberg-Osgood equation
                 f = De_E(yi, xi, :, :) - (sigma_ij / Maps.E) - ...
