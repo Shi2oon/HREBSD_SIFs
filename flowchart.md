@@ -1,4 +1,3 @@
-```mermaid
 flowchart TD
     A[Start] --> B[Input: input_desk_DIC]
     B --> C[Call M_J_KIII_2D]
@@ -14,7 +13,7 @@ flowchart TD
     E --> |No| G6
     G6 --> H[Prepare Data]
     H --> I[Check and adjust alldata format]
-    I --> J[Call reshapeDefromationGradient(alldata)]
+    I --> J[Call reshapeDeformationGradient(alldata)]
     J --> K[Set Material Properties in Maps]
     K --> L[Prompt User for Cropping and Centering Crack Tip]
     L --> M{User selects Yes?}
@@ -36,4 +35,3 @@ flowchart TD
     Z --> AA[Plot and Save Results]
     AA --> AB[Call plot_JKIII(KI, KII, KIII, J, stepsize, input_unit)]
     AB --> AC[End]
-```
