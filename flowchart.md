@@ -11,7 +11,7 @@ flowchart TD
     G3 --> G4{alldata has 6 columns?}
     G4 --> |Yes| G5[Call crackgradient(RawData.Uz, stepsize)]
     G4 --> |No| G6[Continue]
-    E --> |No| G6[Continue]
+    E --> |No| G6
     G6 --> H[Prepare Data]
     H --> I[Check and adjust alldata format]
     I --> J[Call reshapeDefromationGradient(alldata)]
@@ -21,12 +21,12 @@ flowchart TD
     M --> |Yes| N[Call CroppingEqually(Maps)]
     N --> O[Call center_Crack_tip(Crop)]
     M --> |No| P[Continue]
-    L --> P[Continue]
+    L --> P
     P --> Q[Prompt User for Crack Position]
     Q --> R{Crack on Right?}
     R --> |Yes| S[Flip Maps data]
     R --> |No| T[Continue]
-    S --> T[Continue]
+    S --> T
     T --> U[Calculate J-Integral]
     U --> V[Call decomposeDU(Maps)]
     V --> W[Calculate Work Done (Wd)]
