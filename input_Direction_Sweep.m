@@ -14,7 +14,7 @@ Prop.stressstat = 'plane_stress';  % Stress state assumption
 
 % Define the rotation angles for the crack orientation
 % crack_angles = -90:5:90;  % Angles from -90 to 90 degrees in increments of 5 degrees
-crack_angles = -9:0.01:-8.9;  % Angles from -90 to 90 degrees in increments of 5 degrees
+crack_angles = -90:1:90;  % Angles from -90 to 90 degrees in increments of 5 degrees
 
 % Preallocate arrays to store results for the J-integral and stress intensity factors
 J_values = NaN(length(crack_angles), 1);  % J-integral values

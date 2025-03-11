@@ -1,16 +1,14 @@
 % Example, synthetic data
 clc;clear;close all
 addpath([pwd '\functions'])
-[Prop,~,alldata] = Calibration_2DKIII(1,2,3);
+[Prop,M4,alldata] = Calibration_2DKIII(3,1,2);
 
-% [J,KI,KII,KIII] = KIII_2D_v2(alldata,Prop); % as desigignated maps
 [K,KI,KII,KIII,J,M,Maps] = M_J_KIII_2D(alldata,Prop);
-% [J,KI,KII,KIII] = KIII_2D(MatProp);         % or just MatProp
-fprintf('Does M = %.2f equals J1 * x1 = %.2f\n', M.true(1),J.vectorial_true(1)*Maps.stepsize )
-% fprintf('Does M = %.2f equals J2 * x2 = %.2f\n', M.true(2),J.vectorial_true(2)*Maps.stepsize )
+% Prop.Operation = 'DIC';
+% [K,KI,KII,KIII,J,M,Maps] = M_J_KIII_2D(M4.data,Prop);% as desigignated maps
 
 %% M integral verfication after rotation (KI-III values will change)
-    theta = 90;  % Get the current crack angle
+    theta = J.direction_true;  % Get the current crack angle
     R = [cosd(theta) sind(theta) 0;  % Create a rotation matrix
          -sind(theta) cosd(theta) 0;
          0 0 1];  % 3D rotation matrix (z-axis rotation)
@@ -41,5 +39,4 @@ fprintf('Does M = %.2f equals J1 * x1 = %.2f\n', M.true(1),J.vectorial_true(1)*M
         RotatedAlldata(idx, 12) = A_rot(3, 3);
     end
 [~,~,~,~,J2,M2] = M_J_KIII_2D(RotatedAlldata,Prop);
-fprintf('Does M = %.2f equals J2 * x2 = %.2f\n', M2.true1,J2.total_true*Maps.stepsize )
 

@@ -64,7 +64,11 @@ if isfield(MatProp,'Operation')
                 RawData.E21(:) RawData.E22(:) zeros(size(RawData.Y1(:))) ...
                 zeros(size(RawData.Y1(:))) zeros(size(RawData.Y1(:))) zeros(size(RawData.Y1(:)))];
         end
-
+        plotDisp(RawData,MatProp.units.xy)
+        if isfield(MatProp,'SavingD')
+            saveas(gcf, [fileparts(MatProp.SavingD) '\u.fig']);
+            saveas(gcf, [fileparts(MatProp.SavingD) '\u.tif']);  close
+        end
     end
 end
 
@@ -101,7 +105,7 @@ end
 %
 %% prepare Data
 if ~exist('loopedJ','var')
-    pcolor(Maps.du11);
+    figure;pcolor(Maps.du11);
     axis tight; axis image; axis off; colormap jet;set(gca,'Ydir','reverse');shading interp;
     set(gcf,'position',[737 287 955 709]);
     %
@@ -150,7 +154,7 @@ if isfield(Maps,'Stiffness')
     [Maps.E,Maps.nu,Maps.G,Maps.Co] = effectiveE_nu(Maps.Stiffness); % in Pa
 else
     Maps.E = Maps.E*Saf;
-    Maps.G = Maps.E/(2*(1 + Maps.nu));
+    Maps.G = Maps.E/(2*(1 + Maps.nu)); %shear modulus
     if strcmpi(Maps.stressstat,'plane_strain')
         Maps.E = Maps.E/(1-Maps.nu^2);% for HR-EBSD plane stress conditions
     end
@@ -169,7 +173,22 @@ end
 Maps.stepsize = mean(unique(round(diff(unique(Maps.Y(:))),4)),'omitnan')*saf;
 Maps.X = Maps.X*saf;
 Maps.Y = Maps.Y*saf;
-Maps.units.St = 'Pa';        Maps.units.xy = 'um';
+Maps.units.St = 'Pa';        Maps.units.xy = 'm';
+
+%% for plotting
+if Maps.stepsize > 1
+    Maps.units.xy = 'm';
+    saf = 1;
+elseif Maps.stepsize > 1e-3
+    Maps.units.xy = 'mm';
+    saf = 1e-3;
+elseif Maps.stepsize > 1e-6
+    Maps.units.xy = 'um';
+    saf = 1e-6;
+elseif Maps.stepsize > 1e-9
+    Maps.units.xy = 'nm';
+    saf = 1e-9;
+end
 DataSize = [size(Maps.du11),1];
 
 %% Decomposition method.
@@ -182,8 +201,8 @@ Wd = squeeze(Wd);
 % Decomposed Plots
 plot_DecomposeddU(du_dx,Maps);
 if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_du.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_du.tif']);  close
+    saveas(gcf, [Maps.SavingD '\Decomposed_du.fig']);
+    saveas(gcf, [Maps.SavingD '\Decomposed_du.tif']);  close
 end
 
 if isfield(Maps,'E11')
@@ -195,16 +214,16 @@ end
 plot_DecomposedStrain(E(:,:,1,1,:),E(:,:,2,2,:),E(:,:,3,3,:),E(:,:,1,2,:),...
     E(:,:,1,3,:),E(:,:,2,3,:),Maps);
 if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Strain.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Strain.tif']);  close
+    saveas(gcf, [Maps.SavingD '\Decomposed_Strain.fig']);
+    saveas(gcf, [Maps.SavingD '\Decomposed_Strain.tif']);  close
 end
 
 if isfield(Maps,'S11')
     plot_DecomposedStess(S(:,:,1,1,:),S(:,:,2,2,:),S(:,:,3,3,:),S(:,:,1,2,:),...
         S(:,:,1,3,:),S(:,:,2,3,:),Maps,Saf);
     if isfield(Maps,'SavingD')
-        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Stress.fig']);
-        saveas(gcf, [fileparts(Maps.SavingD) '\Decomposed_Stress.tif']);  close
+        saveas(gcf, [Maps.SavingD '\Decomposed_Stress.fig']);
+        saveas(gcf, [Maps.SavingD '\Decomposed_Stress.tif']);  close
     end
 end
 %}
@@ -275,21 +294,24 @@ dic = real(ceil(-log10(nanmean(rmoutliers(J.Raw(contrs:end))))))+2;
 if dic<2;       dic = 2;    end
 J.true   = round(mean(J.Raw(contrs:end)),dic);
 J.div    = round(std(J.Raw(contrs:end),1),dic);
+
+K.Raw    = sqrt(J.Raw*Maps.E)*1e-6;
+dic = real(ceil(-log10(nanmean(rmoutliers(K.Raw(contrs:end))))))+2;
+if dic<2;       dic = 2;    end
+K.true   = round(mean(K.Raw(contrs:end)),dic);
+K.div    = round(std(K.Raw(contrs:end),1),dic);
 KI.true  = round(mean(KI.Raw(contrs:end)),dic);
 KI.div   = round(std(KI.Raw(contrs:end),1),dic);
 KII.true = round(mean(KII.Raw(contrs:end)),dic);
 KII.div  = round(std(KII.Raw(contrs:end),1),dic);
 KIII.true= round(mean(KIII.Raw(contrs:end)),dic);
 KIII.div = round(std(KIII.Raw(contrs:end),1),dic);
-K.Raw    = sqrt(J.Raw*Maps.E)*1e-6;
-K.true   = round(mean(K.Raw(contrs:end)),dic);
-K.div    = round(std(K.Raw(contrs:end),1),dic);
 %
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_K.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_K.tif']);  close all
-    save([fileparts(Maps.SavingD) '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps');
+    saveas(gcf, [Maps.SavingD '\J_K.fig']);
+    saveas(gcf, [Maps.SavingD '\J_K.tif']);  close all
+    save([Maps.SavingD '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps');
 end
 %}
 
@@ -331,8 +353,22 @@ end
 % to avoid imaginary number (needs to be solved so the code could work for
 % compressive fields
 J.vectorial = J.vectorial(:,1:oh);
+dic = real(ceil(-log10(nanmean(rmoutliers(J.vectorial(contrs:end))))))+2;
+if dic<2;       dic = 2;    end
 J.vectorial_true   = round(mean(J.vectorial(:,contrs:end),2),dic);
 J.vectorial_div    = round(std(J.vectorial(:,contrs:end),1,2),dic);
+J.direction = rad2deg(atan(J.vectorial(2,:)./J.vectorial(1,:)));
+J.direction_true   = round(mean(J.direction(:,contrs:end),2),dic);
+J.direction_div    = round(std(J.direction(:,contrs:end),1,2),dic);
+J.maxJ = J.vectorial(1,:)./cosd(J.direction);
+J.maxJ_true   = round(mean(J.maxJ(:,contrs:end),2),dic);
+J.maxJ_div    = round(std(J.maxJ(:,contrs:end),1,2),dic);
+
+K.Eff_Raw = sqrt(J.vectorial(1,:)*Maps.E)*1e-6;
+dic = real(ceil(-log10(nanmean(rmoutliers(K.Raw(contrs:end))))))+2;
+if dic<2;       dic = 2;    end
+K.Eff_true = round(mean(K.Eff_Raw(contrs:end),2),dic);
+K.Eff_div = round(std(K.Eff_Raw(contrs:end),1,2),dic);
 
 dic = real(ceil(-log10(nanmean(rmoutliers(M.Raw(contrs:end))))))+2;
 if dic<2;       dic = 2;    end
@@ -340,12 +376,27 @@ M.Raw = M.Raw(:,1:oh);
 M.true  = round(mean(M.Raw(:,contrs:end),2),dic);
 M.div   = round(std(M.Raw(:,contrs:end),1,2),dic);
 %
-plot_JM(M,J,Maps.stepsize/saf,Maps.units.xy,'M')
+plot_JML(M,J,Maps.stepsize/saf,Maps.units.xy,'M')
 if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_M.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_M.tif']);  close all
-    save([fileparts(Maps.SavingD) '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
+    saveas(gcf, [Maps.SavingD '\J_M.fig']);
+    saveas(gcf, [Maps.SavingD '\J_M.tif']);  close all
+    save([Maps.SavingD '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
 end
+
+plot_J_theta(J,Maps.stepsize/saf,Maps.units.xy)
+if isfield(Maps,'SavingD')
+    saveas(gcf, [Maps.SavingD '\J_Q.fig']);
+    saveas(gcf, [Maps.SavingD '\J_Q.tif']);  close all
+    save([Maps.SavingD '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
+end
+
+plot_JKeff(K,J,Maps.stepsize/saf,Maps.units.xy)
+if isfield(Maps,'SavingD')
+    saveas(gcf, [Maps.SavingD '\J_M.fig']);
+    saveas(gcf, [Maps.SavingD '\J_M.tif']);  close all
+    save([Maps.SavingD '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
+end
+
 %}
 
 %% L-integral (not correct!, see https://doi.org/10.1007/s00707-014-1152-y
@@ -377,11 +428,11 @@ L.Raw = abs(L.Raw(:,1:oh));
 L.true  = round(mean(L.Raw(:,contrs:end),2),dic);
 L.div   = round(std(L.Raw(:,contrs:end),1,2),dic);
 
-plot_JM(L,J,Maps.stepsize/saf,Maps.units.xy,'L')
+plot_JML(L,J,Maps.stepsize/saf,Maps.units.xy,'L')
 if isfield(Maps,'SavingD')
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_L.fig']);
-    saveas(gcf, [fileparts(Maps.SavingD) '\J_L.tif']);  close all
-    save([fileparts(Maps.SavingD) '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
+    saveas(gcf, [Maps.SavingD '\J_L.fig']);
+    saveas(gcf, [Maps.SavingD '\J_L.tif']);  close all
+    save([Maps.SavingD '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
 end
 end
 %}
@@ -791,7 +842,7 @@ for iO =1:3
         end
     end
 end
-addScale([9 3 iV],[Maps.X(:) Maps.Y(:)]);
+addScale([9 3 iV],[Maps.X(:) Maps.Y(:)],Maps.units.xy);
 
 cbax  = axes('visible', 'off');             cU(abs(cU)==1)=0;
 caxis(cbax,[min(cU(:)) max(cU(:))]);
@@ -832,7 +883,7 @@ s9=subplot(3,3,9);  	pcolor(Maps.X,Maps.Y,Maps.E33);
 title([char(949) '_{zz}'],'fontsize',19);   shading interp;
 axis image; axis off; colormap jet;         box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(6,:) = c.Limits;         colorbar off;
-addScale([3 3 9],[Maps.X(:) Maps.Y(:)]);
+addScale([3 3 9],[Maps.X(:) Maps.Y(:)],Maps.units.xy);
 
 EId   = sqrt(0.5*((uXXd(:,:,1)-uYYd(:,:,1)).^2+(uYYd(:,:,1)-uZZd(:,:,1)).^2+...
     (uZZd(:,:,1)-uXXd(:,:,1)).^2+ ...
@@ -894,7 +945,7 @@ s9=subplot(3,3,9);  	pcolor(Maps.X,Maps.Y,Maps.S33*Saf*1e-9);
 title('\sigma_{zz}','fontsize',19);     shading interp;
 axis image; axis off; colormap jet;     box off; %set(gca,'Ydir','reverse')
 c  =colorbar;	cU(6,:) = c.Limits;     colorbar off;
-addScale([3 3 9],[Maps.X(:) Maps.Y(:)]);
+addScale([3 3 9],[Maps.X(:) Maps.Y(:)],Maps.units.xy);
 
 SId   = sqrt(0.5*((uXXd(:,:,1)-uYYd(:,:,1)).^2+(uYYd(:,:,1)-uZZd(:,:,1)).^2+...
     (uZZd(:,:,1)-uXXd(:,:,1)).^2+ ...
@@ -928,7 +979,6 @@ set([s1 s2 s3 s4 s5 s6 s7 s8 s9],"clim",caxis);
 %}
 set(gcf,'position',[348 59 1396 932]);
 end
-
 
 %%
 function plot_JKIII(KI,KII,KIII,J,stepsize,input_unit)
@@ -970,37 +1020,40 @@ ax2.XLabel.String = 'Contour Number';
 end
 
 %%
-function addScale(No,alldata)
+function addScale(No,alldata,input_unit)
 % funciton to add a measurment line to the graph, you can either input
 % number of the suplots or the exact suplot where you want to add the scale
 % bar
+if strcmpi(input_unit, 'um')
+    input_unit = '\mum';
+end
 if length(No) == 1      && No == 2
-    subplot(1,2,1); AddScalePar(alldata(:,1),alldata(:,2))
-    subplot(1,2,2); AddScalePar(alldata(:,1),alldata(:,2))
+    subplot(1,2,1); AddScalePar(alldata(:,1),alldata(:,2),input_unit)
+    subplot(1,2,2); AddScalePar(alldata(:,1),alldata(:,2),input_unit)
 elseif length(No) == 1  && No == 3
-    subplot(1,3,1); AddScalePar(alldata(:,1),alldata(:,2))
-    subplot(1,3,2); AddScalePar(alldata(:,1),alldata(:,2))
-    subplot(1,3,3); AddScalePar(alldata(:,1),alldata(:,2))
+    subplot(1,3,1); AddScalePar(alldata(:,1),alldata(:,2),input_unit)
+    subplot(1,3,2); AddScalePar(alldata(:,1),alldata(:,2),input_unit)
+    subplot(1,3,3); AddScalePar(alldata(:,1),alldata(:,2),input_unit)
 elseif length(No) == 1	&& No == 1
     AddScalePar(alldata(:,1),alldata(:,2));
 elseif length(No) == 3
-    subplot(No(1),No(2),No(3)); AddScalePar(alldata(:,1),alldata(:,2));
+    subplot(No(1),No(2),No(3)); AddScalePar(alldata(:,1),alldata(:,2),input_unit);
 end
 end
 
-function AddScalePar(X,Y)
+function AddScalePar(X,Y,input_unit)
 X = unique(X);         Y = unique(Y);
 hold on; line([X(ceil(end-length(X)*0.05)),X(end-ceil(length(X)*0.15))],...
     [Y(ceil(length(Y)*0.05)),Y(ceil(length(Y)*0.05))],'Color','k','LineWidth',5)
 ht = text(double(X(end-ceil(length(X)*0.24))),double(Y(ceil(length(Y)*0.14)))...
-    ,[num2str(round(abs(X(ceil(length(X)*0.05))-X(ceil(length(X)*0.15))),1)) '\mum']);
+    ,[num2str(round(abs(X(ceil(length(X)*0.05))-X(ceil(length(X)*0.15))),1)) input_unit]);
 set(ht,'FontSize',16,'FontWeight','Bold')
 set(gca,'Visible','off')
 hold off
 end
 
 %%
-function plot_JM(M, J, stepsize, input_unit,LorM)
+function plot_JML(M, J, stepsize, input_unit,LorM)
 Md = M.Raw(:);
 set(0, 'defaultAxesFontSize', 22);
 set(0, 'DefaultLineMarkerSize', 14);
@@ -1040,7 +1093,67 @@ legend([LorM '_{1} = ' num2str(M.true(1)) ' ± ' num2str(M.div(1)) ' J/m'], ...
     'location', 'northoutside', 'box', 'off');
 
 % Set figure size and formatting
-set(gcf, 'position', [800, -70, 750, 1000]);
+set(gcf, 'position', [460, -70, 750, 1000]);
+grid on;
+box off;
+
+% Adjust axes position
+ax1 = gca;
+axPos = ax1.Position;
+ax1.Position = axPos + [0 0.2 0 -0.15];
+ax1.LineWidth = 1;
+
+% Add second x-axis for contour number
+ax2 = axes('position', (axPos .* [1 1 1 1e-3]) + [0 0.08 0 0], ...
+    'color', 'none', 'linewidth', 1);
+ax2.XLim = [0 length(Contour) + 1];
+ax1.XLim = [0 max(Contour) + stepsize];
+
+% Label the axes
+if strcmpi(input_unit, 'um')
+    input_unit = '\mum';
+end
+ax1.XLabel.String = ['Contour Distance [' input_unit ']'];
+ax2.XLabel.String = 'Contour Number';
+end
+
+%%
+function plot_J_theta(J, stepsize, input_unit)
+set(0, 'defaultAxesFontSize', 22);
+set(0, 'DefaultLineMarkerSize', 14);
+Contour = (1:length(J.vectorial)) * stepsize;
+
+% Create figure and set color order
+fig = figure;
+set(fig, 'defaultAxesColorOrder', [[0 0 0]; [1 0 0]]);
+
+% Plot M on the left y-axis
+yyaxis right;
+hold on;
+% plot(Contour, M.Raw, 'k--d', 'MarkerEdgeColor', 'k', 'LineWidth', 4);  % Plot M.MRaw
+plot(Contour, J.direction, 'k--o', 'LineWidth', 4);  % Plot M.MRaw
+ylabel('VCE^{o}');
+Kd = J.direction(:);
+if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
+hold off;
+
+% Plot J on the right y-axis
+yyaxis left; hold on
+plot(Contour, J.maxJ, 'r-->', 'MarkerEdgeColor', 'r', 'LineWidth', 1.5, 'MarkerFaceColor', 'r');  % Plot J.JRaw
+
+ylabel('J (J/m^2)');
+Kd = J.vectorial(:);
+if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
+hold off
+
+% Update legend to only include M and J
+legend([ 'VCE_{max} = ' num2str(J.direction_true)...
+    ' ± ' num2str(J.direction_div) '^{o}'], ...
+    ['J_{1}^{max} = ' num2str(J.maxJ_true) ' ± ' num2str(J.maxJ_div) ' J/m^2'],...
+    'location', 'northoutside', 'box', 'off');
+
+% Set figure size and formatting
+set(gcf, 'position', [660, -70, 750, 1000]);
 grid on;
 box off;
 
@@ -1373,4 +1486,79 @@ Crop.X   = Crop.X - min(min(Crop.X));  	Crop.Y   = Crop.Y - min(min(Crop.Y));
 if (Crop.X(1) - Crop.X(end))>0;         Crop.X   = flip(Crop.X,2);         end
 if (Crop.Y(1) - Crop.Y(end))>0;         Crop.Y   = flip(Crop.Y,1);         end
 close all
+end
+
+%% plot
+function plotDisp(Maps,input_unit)
+figure;
+s1=subplot(1,3,1);  	pcolor(Maps.X1,Maps.Y1,Maps.Ux);
+title(['U_{x}'],'fontsize',19);   shading interp;
+axis image; axis off; colormap jet;         box off;
+c  =colorbar;	cU(1,:) = c.Limits;         colorbar off;
+s2=subplot(1,3,2);  	pcolor(Maps.X1,Maps.Y1,Maps.Uy);
+title(['U_{y}'],'fontsize',19);   shading interp;
+axis image; axis off; colormap jet;         box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(2,:) = c.Limits;         colorbar off;
+if ~isfield(Maps,'Uz')
+    Maps.Uz = sqrt(Maps.Ux.^2+Maps.Uy.^2);
+    titleA = 'U_{mag}';
+else
+    titleA = 'U_{z}';
+end
+s3=subplot(1,3,3);  	pcolor(Maps.X1,Maps.Y1,Maps.Uz);
+title(titleA,'fontsize',19);   shading interp;
+axis image; axis off; colormap jet;         box off; %set(gca,'Ydir','reverse')
+c  =colorbar;	cU(3,:) = c.Limits;         colorbar off;
+addScale([1 3 3],[Maps.X1(:) Maps.Y1(:)],input_unit);
+%
+cbax  = axes('visible', 'off');             cU(abs(cU)==1)=0;
+caxis(cbax,[min(cU(:)) max(cU(:))]);
+h = colorbar(cbax,'location','southoutside','position',[0.3076 0.2636 0.4266 0.0250]);
+if strcmpi(input_unit, 'um')
+    input_unit = '\mum';
+end
+h.Label.String = ['U [' input_unit ']'];
+h.Label.FontSize = 20;
+set([s1 s2 s3],"clim",caxis);
+%}
+set(gcf,'position',[348 59 1362 770]);
+end
+
+%%
+function plot_JKeff(K,J,stepsize,input_unit)
+set(0,'defaultAxesFontSize',22);       set(0,'DefaultLineMarkerSize',14)
+Contour = (1:length(J.Raw))*stepsize;
+fig=figure;set(fig,'defaultAxesColorOrder',[[0 0 0]; [1 0 0]]);
+yyaxis left;    hold on;
+plot(Contour,K.Raw,'k--o','MarkerEdgeColor','k','LineWidth',4);
+plot(Contour,K.Eff_Raw,'k--s','MarkerEdgeColor','k','LineWidth',1.5,'MarkerFaceColor','k');
+ylabel('K (MPa m^{0.5})'); hold off
+Kd = [K.Raw(:); K.Eff_Raw(:)];
+if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
+yyaxis right; hold on
+plot(Contour,J.Raw,'r--<','MarkerEdgeColor','r','LineWidth',1.5,'MarkerFaceColor','r');
+plot(Contour,J.vectorial_true(1,:),'r--d','MarkerEdgeColor','r','LineWidth',1.5);
+ylabel('J (J/m^2)');        ylim([0 max(J.Raw)+min(J.Raw)/4]);hold off
+legend(['K_{eff}^{I,II,III} = '     num2str(K.true)   ' ± ' num2str(K.div)  ' MPa\surdm' ],...
+    ['K_{eff}^{1} = '       num2str(K.Eff_true)  ' ± ' num2str(K.Eff_div) ' MPa\surdm' ],...
+    ['J_{integral}^{I,II,III} = ' num2str(J.vectorial_true(1))    ' ± ' num2str(J.vectorial_div(1))   ' J/m^2'],...
+    ['J_{1} = ' num2str(J.true)    ' ± ' num2str(J.div)   ' J/m^2'],...
+    'location','northoutside','box','off');
+set(gcf,'position',[860,-70,750,1000]);grid on;  box off;
+ax1 = gca;  axPos = ax1.Position;
+% Change the position of ax1 to make room for extra axes
+% format is [left bottom width height], so moving up and making shorter here...
+ax1.Position = axPos + [0 0.2 0 -0.15];
+% Exactly the same as for plots (above), axes LineWidth can be changed inline or after
+ax1.LineWidth = 1;
+% Add two more axes objects, with small multiplier for height, and offset for bottom
+ax2 = axes('position', (axPos .* [1 1 1 1e-3]) + [0 0.08 0 0], 'color', 'none', 'linewidth', 1);
+% You can change the limits of the new axes using XLim
+ax2.XLim = [0 length(Contour)+1];     ax1.XLim = [0 max(Contour)+stepsize];
+% You can label the axes using XLabel.String
+if strcmpi(input_unit,'um')
+    input_unit = '\mum';
+end
+ax1.XLabel.String = ['Contour Distance [' input_unit ']'];
+ax2.XLabel.String = 'Contour Number';
 end
