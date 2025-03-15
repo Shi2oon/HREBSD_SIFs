@@ -64,10 +64,12 @@ if isfield(MatProp,'Operation')
                 RawData.E21(:) RawData.E22(:) zeros(size(RawData.Y1(:))) ...
                 zeros(size(RawData.Y1(:))) zeros(size(RawData.Y1(:))) zeros(size(RawData.Y1(:)))];
         end
+        if ~exist('loopedJ','var')
         plotDisp(RawData,MatProp.units.xy)
         if isfield(MatProp,'SavingD')
             saveas(gcf, [fileparts(MatProp.SavingD) '\u.fig']);
             saveas(gcf, [fileparts(MatProp.SavingD) '\u.tif']);  close
+        end
         end
     end
 end
@@ -263,9 +265,9 @@ end
 %% Equivalent SIF
 % to avoid imaginary number (needs to be solved so the code could work for
 % compressive fields
-J.Raw = abs(J.Raw);
-J.KRaw(1:2,:) = sqrt(J.Raw(1:2,:)*Maps.E);
-J.KRaw(3,:) = sqrt(J.Raw(3,:)*2*Maps.G);      % Mode III
+% J.Raw = abs(J.Raw);
+J.KRaw(1:2,:) = signed_sqrt(J.Raw(1:2,:)*Maps.E);
+J.KRaw(3,:) = signed_sqrt(J.Raw(3,:)*2*Maps.G);      % Mode III
 J.JRaw = J.Raw;
 J.Raw = sum(J.Raw,'omitnan');
 %
@@ -295,7 +297,7 @@ if dic<2;       dic = 2;    end
 J.true   = round(mean(J.Raw(contrs:end)),dic);
 J.div    = round(std(J.Raw(contrs:end),1),dic);
 
-K.Raw    = sqrt(J.Raw*Maps.E)*1e-6;
+K.Raw    = signed_sqrt(J.Raw*Maps.E)*1e-6;
 dic = real(ceil(-log10(nanmean(rmoutliers(K.Raw(contrs:end))))))+2;
 if dic<2;       dic = 2;    end
 K.true   = round(mean(K.Raw(contrs:end)),dic);
@@ -307,11 +309,13 @@ KII.div  = round(std(KII.Raw(contrs:end),1),dic);
 KIII.true= round(mean(KIII.Raw(contrs:end)),dic);
 KIII.div = round(std(KIII.Raw(contrs:end),1),dic);
 %
+if ~exist('loopedJ','var')
 plot_JKIII(KI,KII,KIII,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
     saveas(gcf, [Maps.SavingD '\J_K.fig']);
     saveas(gcf, [Maps.SavingD '\J_K.tif']);  close all
     save([Maps.SavingD '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps');
+end
 end
 %}
 
@@ -335,7 +339,7 @@ for kk = 1:2
             termJ(:,:,ii) = squeeze(S(:,:,ii,jj)).*squeeze(du_dx(:,:,ii,kk));
             termM(:,:,ii) = squeeze(S(:,:,ii,jj)).*squeeze(du_dx(:,:,ii,kk)).*xx(kk);
         end
-        JAdr(:,:,kk,jj) =(sum(termJ,3,'omitnan') -Wd.*Am(1,jj)).*squeeze(dq1d(jj,:,:)).*dA;
+        JAdr(:,:,kk,jj) = (sum(termJ,3,'omitnan')-Wd.*Am(kk,jj)).*squeeze(dq1d(jj,:,:)).*dA;
         MAdr(:,:,kk,jj) = (sum(termM,3,'omitnan')-Wd.*xx(jj).*Am(kk,jj)).*squeeze(dq1d(jj,:,:)).*dA;
     end
 end
@@ -360,7 +364,7 @@ J.vectorial_div    = round(std(J.vectorial(:,contrs:end),1,2),dic);
 J.direction = rad2deg(atan(J.vectorial(2,:)./J.vectorial(1,:)));
 J.direction_true   = round(mean(J.direction(:,contrs:end),2),dic);
 J.direction_div    = round(std(J.direction(:,contrs:end),1,2),dic);
-J.maxJ = J.vectorial(1,:)./cosd(J.direction);
+J.maxJ = sqrt(J.vectorial(1,:).^2+J.vectorial(2,:).^2);
 J.maxJ_true   = round(mean(J.maxJ(:,contrs:end),2),dic);
 J.maxJ_div    = round(std(J.maxJ(:,contrs:end),1,2),dic);
 
@@ -376,6 +380,7 @@ M.Raw = M.Raw(:,1:oh);
 M.true  = round(mean(M.Raw(:,contrs:end),2),dic);
 M.div   = round(std(M.Raw(:,contrs:end),1,2),dic);
 %
+if ~exist('loopedJ','var')
 plot_JML(M,J,Maps.stepsize/saf,Maps.units.xy,'M')
 if isfield(Maps,'SavingD')
     saveas(gcf, [Maps.SavingD '\J_M.fig']);
@@ -385,8 +390,8 @@ end
 
 plot_J_theta(J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
-    saveas(gcf, [Maps.SavingD '\J_Q.fig']);
-    saveas(gcf, [Maps.SavingD '\J_Q.tif']);  close all
+    saveas(gcf, [Maps.SavingD '\J_VCE.fig']);
+    saveas(gcf, [Maps.SavingD '\J_VCE.tif']);  close all
     save([Maps.SavingD '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
 end
 
@@ -396,7 +401,7 @@ if isfield(Maps,'SavingD')
     saveas(gcf, [Maps.SavingD '\J_M.tif']);  close all
     save([Maps.SavingD '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
 end
-
+end
 %}
 
 %% L-integral (not correct!, see https://doi.org/10.1007/s00707-014-1152-y
@@ -427,12 +432,13 @@ if dic<2;       dic = 2;    end
 L.Raw = abs(L.Raw(:,1:oh));
 L.true  = round(mean(L.Raw(:,contrs:end),2),dic);
 L.div   = round(std(L.Raw(:,contrs:end),1,2),dic);
-
+if ~exist('loopedJ','var')
 plot_JML(L,J,Maps.stepsize/saf,Maps.units.xy,'L')
 if isfield(Maps,'SavingD')
     saveas(gcf, [Maps.SavingD '\J_L.fig']);
     saveas(gcf, [Maps.SavingD '\J_L.tif']);  close all
     save([Maps.SavingD '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
+end
 end
 end
 %}
@@ -991,10 +997,10 @@ plot(Contour,KII.Raw,'k--s','MarkerEdgeColor','k','LineWidth',1.5,'MarkerFaceCol
 plot(Contour,KIII.Raw,'k--d','MarkerEdgeColor','k','LineWidth',4');
 ylabel('K (MPa m^{0.5})'); hold off
 Kd = [KI.Raw(:); KII.Raw(:); KIII.Raw(:)];
-if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
+if min(Kd(:))>0;     ylim([min(Kd(:))-abs(min(Kd(:))/3) max(Kd(:))+min(Kd(:))/3]);      end
 yyaxis right;
 plot(Contour,J.Raw,'r--<','MarkerEdgeColor','r','LineWidth',1.5,'MarkerFaceColor','r');
-ylabel('J (J/m^2)');        ylim([0 max(J.Raw)+min(J.Raw)/4]);
+ylabel('J (J/m^2)');        ylim([min(J.Raw)-abs(min(J.Raw)/4) max(J.Raw)+min(J.Raw)/4]);
 legend(['K_{I} = '     num2str(KI.true)   ' ± ' num2str(KI.div)  ' MPa\surdm' ],...
     ['K_{II} = '       num2str(KII.true)  ' ± ' num2str(KII.div) ' MPa\surdm' ],...
     ['K_{III} = '      num2str(KIII.true) ' ± ' num2str(KIII.div) ' MPa\surdm' ],...
@@ -1071,7 +1077,7 @@ plot(Contour, M.Raw(1,:), 'k--o', 'LineWidth', 4);  % Plot M.MRaw
 plot(Contour, M.Raw(2,:), 'k--s', 'LineWidth', 4, 'MarkerFaceColor','k');  % Plot M.MRaw
 ylabel([LorM ' (J/m)']);
 Kd = M.Raw(:);
-if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
+if min(Kd(:))>0;     ylim([min(Kd(:))-abs(min(Kd(:))/3) max(Kd(:))+min(Kd(:))/3]);      end
 hold off;
 
 % Plot J on the right y-axis
@@ -1081,7 +1087,7 @@ plot(Contour, J.vectorial(2,:), 'r--d', 'MarkerEdgeColor', 'r', 'LineWidth', 1.5
 
 ylabel('J (J/m^2)');
 Kd = J.vectorial(:);
-if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
+if min(Kd(:))>0;     ylim([min(Kd(:))-abs(min(Kd(:))/3) max(Kd(:))+min(Kd(:))/3]);      end
 hold off
 
 % Update legend to only include M and J
@@ -1132,9 +1138,9 @@ yyaxis right;
 hold on;
 % plot(Contour, M.Raw, 'k--d', 'MarkerEdgeColor', 'k', 'LineWidth', 4);  % Plot M.MRaw
 plot(Contour, J.direction, 'k--o', 'LineWidth', 4);  % Plot M.MRaw
-ylabel('VCE^{o}');
+ylabel('VCE\circ');
 Kd = J.direction(:);
-if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
+if min(Kd(:))>0;     ylim([min(Kd(:))-abs(min(Kd(:))/3) max(Kd(:))+min(Kd(:))/3]);      end
 hold off;
 
 % Plot J on the right y-axis
@@ -1143,12 +1149,12 @@ plot(Contour, J.maxJ, 'r-->', 'MarkerEdgeColor', 'r', 'LineWidth', 1.5, 'MarkerF
 
 ylabel('J (J/m^2)');
 Kd = J.vectorial(:);
-if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
+if min(Kd(:))>0;     ylim([min(Kd(:))-abs(min(Kd(:))/3) max(Kd(:))+min(Kd(:))/3]);      end
 hold off
 
 % Update legend to only include M and J
 legend([ 'VCE_{max} = ' num2str(J.direction_true)...
-    ' ± ' num2str(J.direction_div) '^{o}'], ...
+    ' ± ' num2str(J.direction_div) '\circ'], ...
     ['J_{1}^{max} = ' num2str(J.maxJ_true) ' ± ' num2str(J.maxJ_div) ' J/m^2'],...
     'location', 'northoutside', 'box', 'off');
 
@@ -1534,14 +1540,15 @@ plot(Contour,K.Raw,'k--o','MarkerEdgeColor','k','LineWidth',4);
 plot(Contour,K.Eff_Raw,'k--s','MarkerEdgeColor','k','LineWidth',1.5,'MarkerFaceColor','k');
 ylabel('K (MPa m^{0.5})'); hold off
 Kd = [K.Raw(:); K.Eff_Raw(:)];
-if min(Kd(:))>0;     ylim([0 max(Kd(:))+min(Kd(:))/3]);      end
+if min(Kd(:))>0;     ylim([min(Kd(:))-abs(min(Kd(:))/3) max(Kd(:))+min(Kd(:))/3]);      end
 yyaxis right; hold on
 plot(Contour,J.Raw,'r--<','MarkerEdgeColor','r','LineWidth',1.5,'MarkerFaceColor','r');
 plot(Contour,J.vectorial_true(1,:),'r--d','MarkerEdgeColor','r','LineWidth',1.5);
-ylabel('J (J/m^2)');        ylim([0 max(J.Raw)+min(J.Raw)/4]);hold off
-legend(['K_{eff}^{I,II,III} = '     num2str(K.true)   ' ± ' num2str(K.div)  ' MPa\surdm' ],...
+Kd = [J.vectorial_true(1,:)'; J.Raw'];
+ylabel('J (J/m^2)');        ylim([min(Kd(:))-abs(min(Kd(:))/3) max(Kd(:))+min(Kd(:))/3]);hold off
+legend(['K_{eff}^{I+II+III} = '     num2str(K.true)   ' ± ' num2str(K.div)  ' MPa\surdm' ],...
     ['K_{eff}^{1} = '       num2str(K.Eff_true)  ' ± ' num2str(K.Eff_div) ' MPa\surdm' ],...
-    ['J_{integral}^{I,II,III} = ' num2str(J.vectorial_true(1))    ' ± ' num2str(J.vectorial_div(1))   ' J/m^2'],...
+    ['J_{integral}^{I+II+III} = ' num2str(J.vectorial_true(1))    ' ± ' num2str(J.vectorial_div(1))   ' J/m^2'],...
     ['J_{1} = ' num2str(J.true)    ' ± ' num2str(J.div)   ' J/m^2'],...
     'location','northoutside','box','off');
 set(gcf,'position',[860,-70,750,1000]);grid on;  box off;
@@ -1561,4 +1568,13 @@ if strcmpi(input_unit,'um')
 end
 ax1.XLabel.String = ['Contour Distance [' input_unit ']'];
 ax2.XLabel.String = 'Contour Number';
+end
+
+%% sqrt sign
+function result = signed_sqrt(x)
+    % Calculate the square root of the absolute value for each element
+    abs_sqrt = sqrt(abs(x));
+    
+    % Apply the sign of the original number to each element
+    result = abs_sqrt .* sign(x);
 end

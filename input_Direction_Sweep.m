@@ -14,7 +14,7 @@ Prop.stressstat = 'plane_stress';  % Stress state assumption
 
 % Define the rotation angles for the crack orientation
 % crack_angles = -90:5:90;  % Angles from -90 to 90 degrees in increments of 5 degrees
-crack_angles = -90:1:90;  % Angles from -90 to 90 degrees in increments of 5 degrees
+crack_angles = 7.44;%-90:0.01:90;  % Angles from -90 to 90 degrees in increments of 5 degrees
 
 % Preallocate arrays to store results for the J-integral and stress intensity factors
 J_values = NaN(length(crack_angles), 1);  % J-integral values
@@ -33,8 +33,8 @@ Jv_STD = NaN(length(crack_angles), 1);  % Standard deviation for J
 % Loop through each rotation angle
 for i = 1:length(crack_angles)
     theta = crack_angles(i);  % Get the current crack angle
-    R = [cosd(theta) sind(theta) 0;  % Create a rotation matrix
-         -sind(theta) cosd(theta) 0;
+    R = [cosd(theta) -sind(theta) 0;  % Create a rotation matrix
+         sind(theta) cosd(theta) 0;
          0 0 1];  % 3D rotation matrix (z-axis rotation)
 
     % Initialize an array to store rotated data
@@ -84,33 +84,51 @@ for i = 1:length(crack_angles)
     M_STD(i,1:2) = M.div;         % Store the standard deviation for K_III
     Jv_values(i,1:2) = J.vectorial_true;
     Jv_STD(i,1:2) = J.vectorial_div;
+    direction(i) = J.direction_true;
+    direction_STD(i) = J.direction_div;
+    Jmax_values(i) = J.maxJ_true;           % Store the true J value
+    Jmax_STD(i) = J.maxJ_div;               % Store the standard deviation for J
 end
+T = table(crack_angles(:),J_values,KI_values,KII_values,KIII_values,...
+    Jv_values(:,1),Jv_values(:,2),M_values(:,1),M_values(:,2),'VariableNames',...
+    {'Theta (deg)','J (J/m2)','KI (MPa m-0.5)','KII (MPa m-0.5)',...
+    'KIII (MPa m-0.5)','J1 (J/m2)','J2 (J/m2)','M1 (J/m)','M2 (J/m)'});
+% writetable(T,'data.xlsx');
 
-% Plot the results
-fig = figure;  % Create a new figure
+%% Plot the results6
+set(0,'defaultAxesFontSize',18);       set(0,'DefaultLineMarkerSize',9)
+close all; fig = figure;  % Create a new figure
 set(fig, 'defaultAxesColorOrder', [[0 0 0]; [1 0 0]]);  % Set default color order for axes
 hold on;  % Hold on to the current plot
 
 % Plot K_I, K_II, and K_III on the left y-axis with error bars
 yyaxis left;  % Use the left y-axis
-errorbar(crack_angles, KI_values, KI_STD, '-ok', 'DisplayName', 'K_I', 'MarkerFaceColor', 'k', 'MarkerSize', 12, 'LineWidth', 1.5);
-errorbar(crack_angles, KII_values, KII_STD, '-sk', 'DisplayName', 'K_{II}', 'MarkerFaceColor', 'k', 'MarkerSize', 12, 'LineWidth', 1.5);
-errorbar(crack_angles, KIII_values, KIII_STD, '->k', 'DisplayName', 'K_{III}', 'MarkerFaceColor', 'k', 'MarkerSize', 12, 'LineWidth', 1.5);
+errorbar(crack_angles, KI_values, KI_STD, '--ok', 'DisplayName', 'K_I', 'MarkerSize', 11, 'LineWidth', 1.5);
+errorbar(crack_angles, KII_values, KII_STD, '-.sk', 'DisplayName', 'K_{II}', 'MarkerFaceColor', 'k', 'MarkerSize', 11, 'LineWidth', 1);
+errorbar(crack_angles, KIII_values, KIII_STD, '-<k', 'DisplayName', 'K_{III}', 'MarkerFaceColor', 'k', 'MarkerSize', 11, 'LineWidth', 1);
 ylabel('K (MPa m^{0.5})');  % Label for the left y-axis
 hold off;  % Release the hold on the current plot
 
 % Plot J-integral on the right y-axis with error bars
-yyaxis right;  % Use the right y-axis
-errorbar(crack_angles, J_values, J_STD, '-^r', 'DisplayName', 'J_{integral}', 'MarkerFaceColor', 'r', 'MarkerSize', 12, 'LineWidth', 1.5);
-ylabel('J (J/m^{2})');  % Label for the right y-axis
-xlabel('q\circ');  % Label for the x-axis (crack angle)
+yyaxis right; hold on % Use the right y-axis
+errorbar(crack_angles, J_values, J_STD, '--or', 'DisplayName', 'J_{1}^{I+II+III}', 'MarkerFaceColor', 'r','MarkerSize', 11, 'LineWidth', 1.5);
+errorbar(crack_angles, Jv_values(:,1), Jv_STD(:,1), '-.sr', 'DisplayName', 'J_{1}', 'MarkerFaceColor', 'r', 'MarkerSize', 11, 'LineWidth', 1);
+errorbar(crack_angles, Jv_values(:,2), Jv_STD(:,2), '-<r', 'DisplayName', 'J_{2}', 'MarkerFaceColor', 'r', 'MarkerSize', 11, 'LineWidth', 1);
+hold off; ylabel('J (J/m^{2})');  % Label for the right y-axis
+line([])
+xlabel('VCE\circ');  % Label for the x-axis (crack angle)
 legend('Location', 'best');  % Add a legend to the plot
-title('Stress Intensity Factors and J-integral vs Crack Direction Angles');  % Title for the plot
+% title('Stress Intensity Factors and J-integral vs Crack Direction Angles');  % Title for the plot
 grid on;  % Enable grid on the plot
-set(gcf, 'position', [30 50 1244 643]);  % Set the position and size of the figure window
+set(gcf, 'position', [30 50 1200 750]);  % Set the position and size of the figure window
 xticks([-90:15:90]);xlim([-90 90])
 % Save the figure in both .fig and .tif formats
+[~, objh] = legend('NumColumns',2,'Location','northwest','FontSize',18);
+% Instead of "h_legend" use "[~, objh]"
+objhl = findobj(objh, 'type', 'line');
+set(objhl,'Markersize', 15);
 saveas(gcf, 'Ks.fig');  saveas(gcf, 'Ks.tif');  close;  % Close the figure window
+
 %%
 close all; fig = figure;  % Create a new figure
 set(fig, 'defaultAxesColorOrder', [[0 0 0]; [1 0 0]]);  % Set default color order for axes
@@ -118,15 +136,15 @@ set(fig, 'defaultAxesColorOrder', [[0 0 0]; [1 0 0]]);  % Set default color orde
 % Plot K_I, K_II, and K_III on the left y-axis with error bars
 yyaxis left;  % Use the left y-axis
 hold on;  % Hold on to the current plot
-errorbar(crack_angles, M_values(:,1), M_STD(:,1), '-ok', 'DisplayName', 'M_1', 'MarkerFaceColor', 'k', 'MarkerSize', 12, 'LineWidth', 1.5);
-errorbar(crack_angles, M_values(:,2), M_STD(:,2), '-sk', 'DisplayName', 'M_2', 'MarkerFaceColor', 'k', 'MarkerSize', 12, 'LineWidth', 1.5);
+errorbar(crack_angles, M_values(:,1), M_STD(:,1), '-ok', 'DisplayName', 'M_1', 'MarkerFaceColor', 'k', 'MarkerSize', 12, 'LineWidth', 1);
+errorbar(crack_angles, M_values(:,2), M_STD(:,2), '-sk', 'DisplayName', 'M_2', 'MarkerFaceColor', 'k', 'MarkerSize', 12, 'LineWidth', 1);
 ylabel('M (J/m)');  % Label for the left y-axis
 hold off;  % Release the hold on the current plot
 
 % Plot J-integral on the right y-axis with error bars
 yyaxis right;  % Use the right y-axis
 hold on;  % Hold on to the current plot
-errorbar(crack_angles, Jv_values(:,1), Jv_STD(:,1), '-^r', 'DisplayName', 'J_1', 'MarkerFaceColor', 'r', 'MarkerSize', 12, 'LineWidth', 1.5);
+errorbar(crack_angles, Jv_values(:,1), Jv_STD(:,1), '-^r', 'DisplayName', 'J_1', 'MarkerFaceColor', 'r', 'MarkerSize', 12, 'LineWidth', 1);
 errorbar(crack_angles, Jv_values(:,2), Jv_STD(:,2), '-dr', 'DisplayName', 'J_2', 'MarkerFaceColor', 'r', 'MarkerSize', 12, 'LineWidth', 1.5);
 hold off;  % Hold on to the current plot
 ylabel('J (J/m^{2})');  % Label for the right y-axis
