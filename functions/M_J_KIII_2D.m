@@ -368,7 +368,7 @@ J.maxJ = sqrt(J.vectorial(1,:).^2+J.vectorial(2,:).^2);
 J.maxJ_true   = round(mean(J.maxJ(:,contrs:end),2),dic);
 J.maxJ_div    = round(std(J.maxJ(:,contrs:end),1,2),dic);
 
-K.Eff_Raw = sqrt(J.vectorial(1,:)*Maps.E)*1e-6;
+K.Eff_Raw = signed_sqrt(J.vectorial(1,:)*Maps.E)*1e-6;
 dic = real(ceil(-log10(nanmean(rmoutliers(K.Raw(contrs:end))))))+2;
 if dic<2;       dic = 2;    end
 K.Eff_true = round(mean(K.Eff_Raw(contrs:end),2),dic);

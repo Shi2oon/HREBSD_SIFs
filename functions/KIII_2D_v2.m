@@ -520,7 +520,7 @@ iV=0;   Mo = {'I','II','III'}; KK = {'x','y','z'};
 for ii=1:3
     for ij=1:3
         eval(sprintf('pD = Maps.du%d%d;',ii,ij));
-        if ~sum(pD(:)) == 0
+        if ~sum(pD(:),'omitnan') == 0
             iV= iV+1;
             s{iV}=subplot(9,3,iV);
             pcolor(Maps.X,Maps.Y,pD); clear pD
@@ -534,7 +534,7 @@ for iO =1:3
     for ii=1:3
         for ij=1:3
             pD = squeeze(du_dx(:,:,ii,ij,iO));
-            if ~sum(pD(:)) == 0
+            if ~sum(pD(:),'omitnan') == 0
                 iV= iV+1;
                 s{iV}=subplot(9,3,iV);
                 pcolor(Maps.X,Maps.Y,pD); clear pD
