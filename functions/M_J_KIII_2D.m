@@ -48,7 +48,7 @@ if isfield(MatProp,'Operation')
         stepsize = unique(round(diff(unique(RawData.Y1(:))),4));
         [RawData.E11,RawData.E12,RawData.E13] = crackgradient(RawData.Ux,stepsize);
         [RawData.E21,RawData.E22,RawData.E23] = crackgradient(RawData.Uy,stepsize);
-        U (:,:,1) = RawData.Ux;        U (:,:,2) = RawData.Uy;
+        U (:,:,1) = RawData.Ux;        U (:,:,2) = RawData.Uy;% for L integarl
 
         if size(alldata,2)==6
             [RawData.E31,RawData.E32,RawData.E33] = crackgradient(RawData.Uz,stepsize);
@@ -57,7 +57,7 @@ if isfield(MatProp,'Operation')
                 RawData.E11(:) RawData.E12(:) RawData.E13(:) ...
                 RawData.E21(:) RawData.E22(:) RawData.E23(:) ...
                 RawData.E31(:) RawData.E32(:) RawData.E33(:)];
-            U (:,:,3) = RawData.Uz;
+            U (:,:,3) = RawData.Uz; % for L integarl
         else
             alldata = [RawData.X1(:) RawData.Y1(:) zeros(size(RawData.Y1(:))) ...
                 RawData.E11(:) RawData.E12(:) zeros(size(RawData.Y1(:)))...
@@ -379,7 +379,7 @@ if dic<2;       dic = 2;    end
 M.Raw = M.Raw(:,1:oh);
 M.true  = round(mean(M.Raw(:,contrs:end),2),dic);
 M.div   = round(std(M.Raw(:,contrs:end),1,2),dic);
-%
+
 if ~exist('loopedJ','var')
 plot_JML(M,J,Maps.stepsize/saf,Maps.units.xy,'M')
 if isfield(Maps,'SavingD')
@@ -397,8 +397,8 @@ end
 
 plot_JKeff(K,J,Maps.stepsize/saf,Maps.units.xy)
 if isfield(Maps,'SavingD')
-    saveas(gcf, [Maps.SavingD '\J_M.fig']);
-    saveas(gcf, [Maps.SavingD '\J_M.tif']);  close all
+    saveas(gcf, [Maps.SavingD '\J_Keff.fig']);
+    saveas(gcf, [Maps.SavingD '\J_Keff.tif']);  close all
     save([Maps.SavingD '\KIII_2D.mat'],'J','K','KI','KII','KIII','Maps','M');
 end
 end

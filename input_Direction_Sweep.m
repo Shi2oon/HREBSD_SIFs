@@ -155,3 +155,10 @@ grid on;  % Enable grid on the plot
 set(gcf, 'position', [30 50 1244 643]);  % Set the position and size of the figure window
 % xticks([-90:15:90]);xlim([-90 90])
 saveas(gcf, 'Ms.fig');  saveas(gcf, 'Ms.tif');  close
+
+%%
+plot(Jv_values(:,1),Jv_values(:,2),'.k'); axis equal; box off
+xlabel('J_1 (J/m^{2})')
+ylabel('J_2 (J/m^{2})')
+set(gcf, 'position', [30 50 1044 843]);
+saveas(gcf, 'J1_J2.fig');  saveas(gcf, 'J1_J2.tif');  close
